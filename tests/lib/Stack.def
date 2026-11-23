@@ -1,0 +1,7 @@
+DEFINITION MODULE Stack;
+(* a small stack of integers *)
+CONST Max = 8;
+VAR top: LONGINT;
+PROCEDURE Push(v: LONGINT);
+PROCEDURE Pop(): LONGINT;
+END Stack.

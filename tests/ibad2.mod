@@ -1,0 +1,6 @@
+MODULE IBAD2;
+FROM InOut IMPORT WriteLn;
+BEGIN
+  WriteInt(5, 0);
+  WriteLn
+END IBAD2.

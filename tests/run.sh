@@ -1,0 +1,47 @@
+#!/bin/sh
+# Each tests/NAME.mod is translated, compiled and run; the output must equal
+# tests/NAME.out.  A tests/NAME.err file (a part of the message) means that the
+# translation must fail with a message containing that text.
+# tests/lib holds the modules the tests import: NAME.def (translated to a
+# header), NAME.mod (translated to C), and hand written NAME.c for a definition
+# module that has no implementation module.
+cd "$(dirname "$0")/.." || exit 1
+tmp=${TMPDIR:-/tmp}/arinm2c.$$
+mkdir -p "$tmp"
+fail=0; n=0
+libs=""
+for d in tests/lib/*.def; do
+  b=$(basename "$d" .def)
+  ./arinm2c "$d" -o "$tmp/$b.h" || { echo "FAIL lib $b.def"; exit 1; }
+done
+for m in tests/lib/*.mod; do
+  b=$(basename "$m" .mod)
+  ./arinm2c "$m" -o "$tmp/$b.c" || { echo "FAIL lib $b.mod"; exit 1; }
+  libs="$libs $tmp/$b.c"
+done
+for c in tests/lib/*.c; do libs="$libs $c"; done
+for m in tests/*.mod; do
+  b=$(basename "$m" .mod); n=$((n+1))
+  if [ -f "tests/$b.err" ]; then
+    if ./arinm2c -I tests/lib "$m" -o "$tmp/$b.c" 2>"$tmp/$b.msg"; then
+      echo "FAIL $b: translation should have failed"; fail=$((fail+1))
+    elif grep -qF "$(cat "tests/$b.err")" "$tmp/$b.msg"; then
+      echo "ok   $b (rejected)"
+    else
+      echo "FAIL $b: message was: $(cat "$tmp/$b.msg")"; fail=$((fail+1))
+    fi
+    continue
+  fi
+  if ! ./arinm2c -I tests/lib "$m" -o "$tmp/$b.c" 2>"$tmp/$b.msg"; then
+    echo "FAIL $b: $(cat "$tmp/$b.msg")"; fail=$((fail+1)); continue
+  fi
+  if ! ${CC:-cc} -std=c11 -Wall -Wno-unused-label -I "$tmp" -o "$tmp/$b" "$tmp/$b.c" $libs 2>"$tmp/$b.cc"; then
+    echo "FAIL $b: C compile error"; head -5 "$tmp/$b.cc"; fail=$((fail+1)); continue
+  fi
+  "$tmp/$b" >"$tmp/$b.got"
+  if cmp -s "$tmp/$b.got" "tests/$b.out"; then echo "ok   $b"
+  else echo "FAIL $b: output differs"; diff "$tmp/$b.got" "tests/$b.out" | head -5; fail=$((fail+1)); fi
+done
+rm -rf "$tmp"
+echo "$n tests, $fail failed"
+[ "$fail" = 0 ]

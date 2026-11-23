@@ -1,0 +1,6 @@
+MODULE M7BAD1;
+VAR a: INT32; b: INT64;
+BEGIN
+  a := 1;
+  b := a
+END M7BAD1.
