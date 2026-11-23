@@ -10,6 +10,9 @@ extern int nincdirs;
 
 char *readfile(const char *path);
 
+/* the path of name+ext in the directory of the source or in a -I directory */
+char *findfile(const char *name, const char *ext);
+
 typedef struct Saved {
     const char *src, *srcname;
     size_t pos;

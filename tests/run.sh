@@ -71,6 +71,40 @@ for m in tests/*.mod; do
   if cmp -s "$tmp/$b.got" "tests/$b.out"; then echo "ok   $b"
   else echo "FAIL $b: output differs"; diff "$tmp/$b.got" "tests/$b.out" | head -5; fail=$((fail+1)); fi
 done
+# arinm2c -M writes a Makefile; make builds the program from it, a second make
+# finds nothing to do, and a changed .def makes make build again
+root=$(pwd)
+for b in m10 m5 chain; do
+  n=$((n+1)); d="$tmp/mk_$b"; mkdir "$d" "$d/lib"; cp tests/lib/* "$d/lib/"
+  if ! ./arinm2c -I "$d/lib" -M "$root/tests/$b.mod" -o "$d/Makefile" 2>"$d/err"; then
+    echo "FAIL make/$b: -M: $(cat "$d/err")"; fail=$((fail+1)); continue
+  fi
+  if ! (cd "$d" && make M2C="$root/arinm2c" >log 2>&1); then
+    echo "FAIL make/$b: make failed"; tail -5 "$d/log"; fail=$((fail+1)); continue
+  fi
+  (cd "$d" && "./$b" >got)
+  if ! cmp -s "$d/got" "tests/$b.out"; then
+    echo "FAIL make/$b: output differs"; fail=$((fail+1)); continue
+  fi
+  if ! (cd "$d" && make -q M2C="$root/arinm2c" "$b" >/dev/null 2>&1); then
+    echo "FAIL make/$b: a second make finds something to do"; fail=$((fail+1)); continue
+  fi
+  echo "ok   make/$b"
+done
+# a change of a definition module two imports away makes make build again
+d="$tmp/mk_chain"; n=$((n+1))
+sleep 1; touch "$d/lib/Cb.def"
+if (cd "$d" && make -q M2C="$root/arinm2c" chain >/dev/null 2>&1); then
+  echo "FAIL make/chain: a changed Cb.def does not make make build again"; fail=$((fail+1))
+elif ! (cd "$d" && make M2C="$root/arinm2c" >log 2>&1 && ./chain | cmp -s - "$root/tests/chain.out"); then
+  echo "FAIL make/chain: the build after the change"; fail=$((fail+1))
+else echo "ok   make/chain (a changed .def builds again)"; fi
+# a circular import is found by -M, too
+n=$((n+1))
+if ./arinm2c -I tests/bad -M tests/bad/cyc.mod -o "$tmp/cyc.mk" 2>"$tmp/cyc.err"; then
+  echo "FAIL make/cyc: -M should have failed"; fail=$((fail+1))
+elif grep -qF "circular import" "$tmp/cyc.err"; then echo "ok   make/cyc (rejected)"
+else echo "FAIL make/cyc: $(cat "$tmp/cyc.err")"; fail=$((fail+1)); fi
 rm -rf "$tmp"
 echo "$n tests, $fail failed"
 [ "$fail" = 0 ]

@@ -1,0 +1,4 @@
+DEFINITION MODULE cycb;
+IMPORT cyca;
+PROCEDURE b;
+END cycb.

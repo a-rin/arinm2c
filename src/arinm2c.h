@@ -24,6 +24,7 @@
  *   stmt      statements
  *   decl      CONST TYPE VAR PROCEDURE, local modules
  *   module    .def .mod and program modules, IMPORT
+ *   deps      -M: the Makefile of a program
  *   main      the command line
  */
 
@@ -37,6 +38,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "module.h"
+#include "deps.h"
 
 #endif

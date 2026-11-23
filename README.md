@@ -27,6 +27,25 @@ source file is always searched).
     arinm2c -I lib Main.mod  -o Main.c
     cc -fwrapv -o main Main.c Stack.c
 
+### Build with make
+
+`arinm2c -M` scans the imports (`IMPORT`, `FROM ... IMPORT`) of a program module
+and writes a Makefile for it:
+
+    arinm2c -I lib -M Main.mod > Makefile
+    make                       # translates, compiles and links
+    make CFLAGS="-std=c11 -fwrapv -g -DM2_ABORT"
+
+The Makefile has a rule for every file: `X.def` to `X.h`, `X.mod` to `X.c`, the
+C compiler for `X.c` and for a hand written `X.c` of a module that has no
+implementation module, and the link of the program with the objects of all the
+modules that the program needs (also those that only the implementation modules
+import). A changed `.def` file builds again what depends on it. The rules are
+plain (no pattern rules): they work with BSD make and GNU make. The paths are
+those that you gave to `arinm2c -M`, so run `make` in the directory in which you
+ran it. The generated files (`.h`, `.c`, `.o`) are written in the current
+directory. A circular import is an error.
+
 A module that has a definition module but no implementation module can be
 written in C by hand; see `tests/lib/InOut.def` and `tests/lib/InOut.c`.
 Every module with a body has a function `X_init()` that runs its body once; the

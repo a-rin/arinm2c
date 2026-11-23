@@ -5,9 +5,11 @@ int main(int argc, char **argv)
 {
     char *text, *slash;
     const char *outname = NULL;
-    int i;
+    int i, want_deps = 0;
     for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-o") && i + 1 < argc)
+        if (!strcmp(argv[i], "-M"))
+            want_deps = 1;
+        else if (!strcmp(argv[i], "-o") && i + 1 < argc)
             outname = argv[++i];
         else if (!strcmp(argv[i], "-I") && i + 1 < argc) {
             if (nincdirs >= 15) {
@@ -23,7 +25,7 @@ int main(int argc, char **argv)
         }
     }
     if (!srcname) {
-        fprintf(stderr, "usage: arinm2c [-I dir] file.{mod,def} [-o file]\n");
+        fprintf(stderr, "usage: arinm2c [-I dir] [-M] file.{mod,def} [-o file]\n");
         return 2;
     }
     text = readfile(srcname);
@@ -43,6 +45,12 @@ int main(int argc, char **argv)
     if (outname && !(out = fopen(outname, "w"))) {
         perror(outname);
         return 1;
+    }
+    if (want_deps) {
+        int rc = deps_main();
+        if (outname)
+            fclose(out);
+        return rc;
     }
     init_predef();
     next();

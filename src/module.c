@@ -32,7 +32,7 @@ char *readfile(const char *path)
 }
 
 /* the path of name+ext in the source directory or in a -I directory */
-static char *findfile(const char *name, const char *ext)
+char *findfile(const char *name, const char *ext)
 {
     int i;
     for (i = 0; i < nincdirs; i++) {
@@ -101,12 +101,21 @@ Module *load_module(const char *name)
     Module *m;
     Saved sv;
     char *path, *text;
+    static char *loading[16];
+    static int nloading;
+    int i;
     for (m = mods; m; m = m->next)
         if (!strcmp(m->name, name))
             return m;
     path = findfile(name, ".def");
     if (!path)
         die("the definition module %s was not found (%s.def)", name, name);
+    for (i = 0; i < nloading; i++)
+        if (!strcmp(loading[i], name))
+            die("circular import of the module %s", name);
+    if (nloading >= 16)
+        die("modules imported too deeply");
+    loading[nloading++] = fmt("%s", name);
     text = readfile(path);
     save(&sv);
     src = text;
@@ -129,6 +138,7 @@ Module *load_module(const char *name)
     m->syms = globals;
     m->next = mods;
     mods = m;
+    nloading--;
     restore(&sv);
     return m;
 }
