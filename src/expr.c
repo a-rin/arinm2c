@@ -634,10 +634,15 @@ static Expr intop(const char *op, Expr a, Expr b)
     /* ponytail: DIV and MOD are C's / and %, and + - * are C's: for a negative
        operand the PIM4 Report is silent (its equation and "truncated quotient"
        disagree), so -7 DIV 3 = -2 and -7 MOD 3 = -1 as in C; a division by zero
-       traps; a signed overflow is undefined in C, so compile the C with -fwrapv
-       (it then wraps); ceiling: no run-time error for overflow or a zero
-       divisor; upgrade: __builtin_add_overflow and a check of the divisor. */
-    e.c = fmt("((%s)(%s %s %s))", ctype_of(rt), a.c, op, b.c);
+       is a run time error (m2_chk); a signed overflow is undefined in C, so compile the C with -fwrapv
+       (it then wraps); ceiling: no run-time error for an overflow; upgrade:
+       __builtin_add_overflow. */
+    {
+        char *bc = b.c;
+        if (!strcmp(op, "/") || !strcmp(op, "%"))
+            bc = fmt("m2_chk(%s, %s, %d)", b.c, cstr(srcname), errline);
+        e.c = fmt("((%s)(%s %s %s))", ctype_of(rt), a.c, op, bc);
+    }
     return e;
 }
 

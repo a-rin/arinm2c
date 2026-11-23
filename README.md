@@ -75,15 +75,19 @@ listed above.
 
 ## What the C code decides
 
-* **Array indices are checked.** An index outside of the bounds writes a message
-  with the file and the line of the Modula-2 source and stops the program. Compile
-  the C with `-DM2_NOCHECK` to remove the checks.
+* **Run time errors** stop the program with a message that has the file and the
+  line of the Modula-2 source (the exit status is 1): an array index outside of
+  the bounds, a division by zero (`DIV`, `MOD`), a `CASE` without a matching label
+  and without `ELSE`, `HALT`, and no memory for `NEW`. Compile the C with
+  `-DM2_ABORT` to call `abort()` instead of `exit(1)`: the program then ends with
+  a signal and leaves a core dump (see `ulimit -c`) for a debugger. Compile with
+  `-DM2_NOCHECK` to remove the checks of the indices and of the divisors.
 * **`DIV` and `MOD`** are `/` and `%` of C. The Report (PIM4, 8.2.1) says that
   `x DIV y` is the truncated quotient and that
   `x = (x DIV y)*y + (x MOD y)` with `0 <= (x MOD y) < y`; for a negative `x`
   these two statements disagree, so the Report defines the operators for
   non-negative operands only. For a negative operand the C code does what C does:
-  `-7 DIV 3 = -2`, `-7 MOD 3 = -1`. A division by zero is not checked.
+  `-7 DIV 3 = -2`, `-7 MOD 3 = -1`. A division by zero is a run time error (see above).
 * **Overflow of a signed integer** is undefined in C. Compile the C with
   `-fwrapv`: the value then wraps. There is no run time error for an overflow.
 * **A value assigned to a subrange variable** is not checked at run time (a

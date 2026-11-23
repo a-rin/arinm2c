@@ -55,8 +55,16 @@ for m in tests/*.mod; do
     # a run time error: the program must stop with a message that has this text
     if "$tmp/$b" >"$tmp/$b.got" 2>"$tmp/$b.rterr"; then
       echo "FAIL $b: the program should have stopped"; fail=$((fail+1))
-    elif grep -qF "$(cat "tests/$b.rt")" "$tmp/$b.rterr"; then echo "ok   $b (run time error)"
-    else echo "FAIL $b: message was: $(cat "$tmp/$b.rterr")"; fail=$((fail+1)); fi
+    elif ! grep -qF "$(cat "tests/$b.rt")" "$tmp/$b.rterr"; then
+      echo "FAIL $b: message was: $(cat "$tmp/$b.rterr")"; fail=$((fail+1))
+    else
+      # with -DM2_ABORT the error must end the program with a signal (a core dump)
+      ${CC:-cc} -std=c11 -fwrapv -DM2_ABORT -I "$tmp" -o "$tmp/${b}_a" "$tmp/$b.c" $libs 2>/dev/null
+      (ulimit -c 0; "$tmp/${b}_a" >/dev/null 2>&1; echo $? >"$tmp/$b.rc") 2>/dev/null
+      rc=$(cat "$tmp/$b.rc")
+      if [ "$rc" -ge 128 ]; then echo "ok   $b (run time error, abort with -DM2_ABORT)"
+      else echo "FAIL $b: -DM2_ABORT gave the exit status $rc"; fail=$((fail+1)); fi
+    fi
     continue
   fi
   "$tmp/$b" >"$tmp/$b.got"

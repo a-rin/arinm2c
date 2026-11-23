@@ -95,7 +95,7 @@ static void for_stmt(void)
 static void case_stmt(void)
 {
     Expr sel = expr();
-    int id = ++loopid, had_else = 0;
+    int id = ++loopid, had_else = 0, line = errline;
     if (sel.t->k != K_INT && sel.t->k != K_CHAR && sel.t->k != K_Z &&
         sel.t->k != K_ENUM)
         die("CASE needs an ordinal selector");
@@ -143,7 +143,8 @@ static void case_stmt(void)
     }
     if (!had_else) {
         emit("default:");
-        emit("  abort();");
+        emit("  m2_fail(%s, %d, \"no label of the CASE fits the value %%lld\", "
+             "(long long)_sel%d);", cstr(srcname), line, id);
     }
     ind--;
     emit("}");
@@ -286,9 +287,11 @@ static void stmt(void)
                 die("%s needs a pointer variable with a type (not an ADDRESS or "
                     "an opaque type)", n);
             if (n[0] == 'N' && a.t->copaque)
-                emit("%s = calloc(1, sizeof(%s));", a.c, a.t->base->cname);
+                emit("%s = m2_alloc(sizeof(%s), %s, %d);", a.c, a.t->base->cname,
+                     cstr(srcname), errline);
             else if (n[0] == 'N')
-                emit("%s = calloc(1, sizeof(*%s));", a.c, a.c);
+                emit("%s = m2_alloc(sizeof(*%s), %s, %d);", a.c, a.c,
+                     cstr(srcname), errline);
             else
                 emit("free(%s);", a.c);
         } else if (!strcmp(n, "INC") || !strcmp(n, "DEC")) {
@@ -323,7 +326,7 @@ static void stmt(void)
             else
                 emit("%s &= ~m2_bit(%s);", a.c, k.c);
         } else if (!strcmp(n, "HALT")) {
-            emit("exit(1);");
+            emit("m2_fail(%s, %d, \"HALT\");", cstr(srcname), errline);
         } else {
             die("'%s' is not declared", n);
         }
