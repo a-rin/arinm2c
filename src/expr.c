@@ -141,8 +141,39 @@ static char *open_arg(Type *pt, Expr *a, const char *who)
     die("the argument of '%s' does not fit the open array parameter", who);
 }
 
+/* a variable of this procedure lives in the frame _fr if the procedure has
+   nested procedures; the variable of an enclosing procedure is in the frame
+   that the static link _up points to (_up->_up for the one above) */
+char *var_text(Sym *s)
+{
+    int hops;
+    char *r;
+    if (s->level == 0)
+        return s->cname;
+    if (s->level == plevel)
+        return s->framed ? fmt("_fr.%s", s->cname) : s->cname;
+    hops = plevel - 1 - s->level;
+    r = "_up";
+    while (hops-- > 0)
+        r = fmt("%s->_up", r);
+    return fmt("%s->%s", r, s->cname);
+}
+
+char *static_link(int pl)
+{
+    int hops;
+    char *r;
+    if (plevel == pl)
+        return "&_fr";
+    hops = plevel - 1 - pl;
+    r = "_up";
+    while (hops-- > 0)
+        r = fmt("%s->_up", r);
+    return r;
+}
+
 Expr call_with(Proc *p, const char *cfunc, const char *name,
-                      int want_result)
+                      int want_result, const char *link)
 {
     Expr e;
     char *args = "";
@@ -180,7 +211,8 @@ Expr call_with(Proc *p, const char *cfunc, const char *name,
     if (i != p->n)
         die("too few arguments for '%s'", name);
     e.t = p->ret;
-    e.c = fmt("%s(%s)", cfunc, args);
+    e.c = fmt("%s(%s%s%s)", cfunc, link ? link : "",
+              (link && args[0]) ? ", " : "", args);
     return e;
 }
 
@@ -188,7 +220,8 @@ Expr call(Sym *s, int want_result)
 {
     if (!s->proc)
         die("'%s' cannot be used here", s->name);
-    return call_with(s->proc, s->cname, s->name, want_result);
+    return call_with(s->proc, s->cname, s->name, want_result,
+                     s->level > 0 ? static_link(s->level) : NULL);
 }
 
 /* a procedure name used as a value (assigned to a procedure variable) */
@@ -196,6 +229,8 @@ static Expr procvalue(Sym *s)
 {
     Expr e;
     memset(&e, 0, sizeof e);
+    if (s->level > 0)
+        die("the nested procedure '%s' cannot be used as a value", s->name);
     if (!s->t) {
         s->t = mk(K_PROC, 8, 0, NULL);
         s->t->sig = s->proc;
@@ -238,14 +273,16 @@ Expr designator(Sym *s)
         e.c = s->t->cname;
         return e;
     }
-    e.c = (s->isvarparam && s->t->k != K_OPEN) ? fmt("(*%s)", s->cname)
-                                               : s->cname;
-    e.t = s->t;
-    e.lvalue = 1;
-    if (s->t->k == K_OPEN) {
-        int k;
-        for (k = 0; k < open_dims(s->t); k++)
-            e.highs[k] = high_name(s->cname, k);
+    {
+        char *vt = var_text(s);
+        e.c = (s->isvarparam && s->t->k != K_OPEN) ? fmt("(*%s)", vt) : vt;
+        e.t = s->t;
+        e.lvalue = 1;
+        if (s->t->k == K_OPEN) {
+            int k;
+            for (k = 0; k < open_dims(s->t); k++)
+                e.highs[k] = high_name(vt, k);
+        }
     }
     return designator_tail(e);
 }
@@ -316,7 +353,7 @@ Expr designator_tail(Expr e)
 static Expr finish_call(Expr e, const char *name)
 {
     if (e.t->k == K_PROC && is("("))
-        return call_with(e.t->sig, e.c, name, 1);
+        return call_with(e.t->sig, e.c, name, 1, NULL);
     return e;
 }
 

@@ -15,7 +15,14 @@ void check_assign(Type *dst, Expr *e, const char *what);
 char *conv(Type *dst, Expr *e);
 
 Expr call_with(Proc *p, const char *cfunc, const char *name,
-                      int want_result);
+                      int want_result, const char *link);
+
+/* the C text of a variable of a procedure: in the frame, or of an enclosing
+   procedure (through the static link _up) */
+char *var_text(Sym *s);
+
+/* the frame of the procedure at level pl, as the first argument of a call */
+char *static_link(int pl);
 
 Expr call(Sym *s, int want_result);
 

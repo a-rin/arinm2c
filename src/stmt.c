@@ -256,7 +256,7 @@ static void stmt(void)
         if (wf || (s && s->k == S_VAR)) {
             Expr l = wf ? designator_tail(w) : designator(s), r;
             if (l.t->k == K_PROC && !is(":=")) {
-                Expr c = call_with(l.t->sig, l.c, n, 0);
+                Expr c = call_with(l.t->sig, l.c, n, 0, NULL);
                 emit("%s;", c.c);
             } else {
                 expect(":=");

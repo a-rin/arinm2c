@@ -81,3 +81,55 @@ char *cchar(unsigned char c)
         return fmt("'\\%03o'", c);
     return fmt("'%c'", c);
 }
+
+char *types_text;
+int hoist_types;
+
+/* the declaration of a type: in a procedure it is hoisted out of the function */
+void emit_t(const char *f, ...)
+{
+    va_list ap, ap2;
+    int n;
+    char *line;
+    va_start(ap, f);
+    va_copy(ap2, ap);
+    n = vsnprintf(NULL, 0, f, ap);
+    va_end(ap);
+    line = malloc((size_t)n + 1);
+    if (!line)
+        exit(1);
+    vsnprintf(line, (size_t)n + 1, f, ap2);
+    va_end(ap2);
+    if (!hoist_types) {
+        emit("%s", line);
+        return;
+    }
+    types_text = fmt("%s%s\n", types_text ? types_text : "", line);
+}
+
+FILE *cap_begin(void)
+{
+    FILE *old = out;
+    out = tmpfile();
+    if (!out) {
+        perror("tmpfile");
+        exit(1);
+    }
+    return old;
+}
+
+char *cap_end(FILE *old)
+{
+    long n;
+    char *buf;
+    fflush(out);
+    n = ftell(out);
+    rewind(out);
+    buf = malloc((size_t)n + 1);
+    if (!buf || fread(buf, 1, (size_t)n, out) != (size_t)n)
+        exit(1);
+    buf[n] = 0;
+    fclose(out);
+    out = old;
+    return buf;
+}

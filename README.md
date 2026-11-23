@@ -38,9 +38,13 @@ program calls the ones of the imported modules first.
   exported names are visible outside), `IMPORT`, `FROM ... IMPORT`, opaque types.
 * Statements: all of those of PIM4, including `CASE`, `LOOP`/`EXIT`,
   `FOR ... BY` and `WITH`.
-* Types: integers, `BOOLEAN`, `CHAR`, enumerations, subranges, `SET OF`,
-  `POINTER`, `RECORD` (with variants), `ARRAY` (also open arrays), procedure
-  types.
+* Types: integers, `REAL` and `LONGREAL`, `BOOLEAN`, `CHAR`, enumerations,
+  subranges, `SET OF`, `POINTER`, `RECORD` (with variants), `ARRAY` (also open
+  arrays, up to three dimensions), procedure types.
+* Procedures may be nested. C has no nested functions: a procedure that has
+  nested procedures keeps its variables in a struct (a frame), and the C
+  function of a nested procedure gets a pointer to the frame of the procedure
+  around it. A nested procedure cannot be used as a value.
 * `SYSTEM`: `BYTE`, `ADDRESS`, `ADR`. `ARRAY OF BYTE` accepts a variable of any
   type.
 
@@ -52,6 +56,13 @@ widths (or of the same width and different signs) cannot be mixed in an
 expression: `VAL(INT64, a)` converts. An integer constant has no width of its
 own and fits any integer type.
 
+### Real numbers
+
+`REAL` is a C `float`, `LONGREAL` a `double`. As for the integers, `REAL` and
+`LONGREAL` cannot be mixed in an expression: `VAL(LONGREAL, x)` converts. A
+real literal (`2.5`, `1.5E3`) fits both. `FLOAT(i)` makes a `REAL` of an
+integer and `TRUNC(x)` an integer of a real number.
+
 ### Built in for tests
 
 `WRITE` and `WRITELN` print integers, characters, strings and booleans. They are
@@ -59,8 +70,8 @@ not part of Modula-2; they are there so that a test needs no library.
 
 ## Not done
 
-`REAL`, nested procedures, typed set constructors, multi-dimensional open
-arrays. The C code has the semantics of C where Modula-2 leaves the details to
+Arrays of more than three open dimensions, and Modula-2 features that are not
+listed above. The C code has the semantics of C where Modula-2 leaves the details to
 the implementation: `MOD` of negative numbers, overflow of signed integers, and
 no check of array indices.
 

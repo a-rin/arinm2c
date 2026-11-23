@@ -1,6 +1,35 @@
 /* decl: declarations: CONST TYPE VAR PROCEDURE and local modules */
 #include "arinm2c.h"
 
+/* the declaration (C text) of a local variable of a procedure, in the order of
+   the declarations: a local of the C function, or a field of the frame */
+typedef struct LV {
+    char *decl;
+    struct LV *next;
+} LV;
+
+/* a procedure that is being read */
+typedef struct PCtx {
+    Sym *ps;
+    Proc *p;
+    int framed;         /* it has nested procedures: its variables are in a frame */
+    LV *vars, **vtail;
+    struct PCtx *parent;
+} PCtx;
+static PCtx *cur_p;
+
+/* The C text of a procedure is kept until the outermost procedure is done: C
+   has no nested functions, so the function of a nested procedure goes before
+   the one of the procedure around it. */
+typedef struct Done {
+    char *proto;        /* the prototype, or NULL */
+    char *fwd;          /* the forward declaration of the struct of the frame */
+    char *frame;        /* the struct of the frame */
+    char *text;         /* the function */
+} Done;
+static Done done[64];
+static int ndone;
+
 static void const_decl(void)
 {
     while (tok.k == T_ID) {
@@ -70,10 +99,16 @@ static void var_decl(void)
             die("an open array can only be a parameter");
         for (i = 0; i < n; i++) {
             Sym *s = declare(names[i], S_VAR, t);
-            if (indef)
+            if (indef) {
                 emit("extern %s %s;", t->cname, s->cname);
-            else
-                emit("%s%s %s;", inproc ? "" : "static ", t->cname, s->cname);
+            } else if (inproc) {
+                LV *lv = calloc(1, sizeof *lv);
+                lv->decl = fmt("%s %s;", t->cname, s->cname);
+                *cur_p->vtail = lv;
+                cur_p->vtail = &lv->next;
+            } else {
+                emit("static %s %s;", t->cname, s->cname);
+            }
         }
         expect(";");
     }
@@ -85,18 +120,86 @@ static void check_fwds(void)
         die("the pointer target type '%s' is never declared", fwds->name);
 }
 
+/* the fields and the first lines of a procedure that has a frame, or the
+   local variables of a procedure that has none, for the parameters */
+static void param_code(PCtx *c, int framed, char **fields, char **init)
+{
+    Proc *p = c->p;
+    int i, k;
+    *fields = "";
+    *init = "";
+    for (i = 0; i < p->n; i++) {
+        Param *q = &p->p[i];
+        char *v = fmt("v_%s", q->name);
+        if (q->t->k == K_OPEN) {
+            int nd = open_dims(q->t);
+            char *cnt = "1", *src = q->isvar ? v : fmt("%s_in", v);
+            for (k = 0; k < nd; k++)
+                cnt = fmt("%s * (%s + 1)", cnt, high_name(v, k));
+            if (framed) {
+                *fields = fmt("%s  %s%s;\n", *fields, q->t->cname, v);
+                for (k = 0; k < nd; k++)
+                    *fields = fmt("%s  int64_t %s;\n", *fields, high_name(v, k));
+                if (q->isvar) {
+                    *init = fmt("%s  _fr.%s = %s;\n", *init, v, src);
+                } else {
+                    *init = fmt("%s  %s %s_cp[%s];\n  memcpy(%s_cp, %s, sizeof(%s_cp));\n"
+                                "  _fr.%s = %s_cp;\n",
+                                *init, open_leaf(q->t)->cname, v, cnt, v, src, v,
+                                v, v);
+                }
+                for (k = 0; k < nd; k++)
+                    *init = fmt("%s  _fr.%s = %s;\n", *init, high_name(v, k),
+                                high_name(v, k));
+            } else if (!q->isvar) {
+                *init = fmt("%s  %s %s[%s];\n  memcpy(%s, %s, sizeof(%s));\n", *init,
+                            open_leaf(q->t)->cname, v, cnt, v, src, v);
+            }
+        } else if (framed) {
+            *fields = fmt("%s  %s %s%s;\n", *fields, q->t->cname,
+                          q->isvar ? "*" : "", v);
+            *init = fmt("%s  _fr.%s = %s;\n", *init, v, v);
+        }
+    }
+}
+
+/* the text of the outermost procedure and of the ones nested in it */
+static void flush_procs(void)
+{
+    int i;
+    if (types_text) {
+        fputs(types_text, out);
+        types_text = NULL;
+    }
+    for (i = 0; i < ndone; i++)
+        if (done[i].fwd)
+            fputs(done[i].fwd, out);
+    for (i = 0; i < ndone; i++)
+        if (done[i].frame)
+            fputs(done[i].frame, out);
+    for (i = 0; i < ndone; i++)
+        if (done[i].proto)
+            fputs(done[i].proto, out);
+    for (i = 0; i < ndone; i++)
+        fputs(done[i].text, out);
+    ndone = 0;
+}
+
 static void proc_decl(void)
 {
     char *n = ident();
     Proc *p = calloc(1, sizeof *p);
-    Sym *s;
-    char *params = NULL, *proto;
-    int i, reuse = 0;
+    Sym *s, *sy;
+    char *params = NULL, *proto, *outer_mod = modname, *body = "", *text;
+    char *fields, *init, *fr;
+    int i, reuse = 0, nested = inproc, saved_ind = ind;
     Proc *old = NULL;
-    if (inproc)
-        die("nested procedures are not supported yet");
+    PCtx ctx, *parent = cur_p;
+    Done *d;
+    if (nested && (nl >= 7 || ndone >= 60))
+        die("procedures nested too deeply");
     s = NULL;
-    if (impl_mode && !indef) {
+    if (impl_mode && !indef && !inproc) {
         s = lookup_in(globals, n);
         if (s && !(s->k == S_PROC && s->exported && !s->defined))
             s = NULL;
@@ -109,6 +212,8 @@ static void proc_decl(void)
         s = declare(n, S_PROC, NULL);
         s->proc = p;
     }
+    if (nested)
+        s->cname = fmt("%s_%s", modname, n);
     if (accept("(")) {
         if (!is(")")) {
             do {
@@ -155,6 +260,9 @@ static void proc_decl(void)
                       p->p[i].name);
         params = fmt("%s%s%s", params ? params : "", i ? ", " : "", one);
     }
+    if (nested)
+        params = fmt("struct Fr_%s *_up%s%s", parent->ps->cname,
+                     params ? ", " : "", params ? params : "");
     proto = fmt("%s%s %s(%s)", (reuse || indef) ? "" : "static ",
                 p->ret ? p->ret->cname : "void", s->cname,
                 params ? params : "void");
@@ -162,41 +270,82 @@ static void proc_decl(void)
         emit("%s;", proto);
         return;
     }
-    if (!reuse)
-        emit("%s;", proto);
-    emit("%s {", proto);
-    ind++;
+
+    /* a procedure inside a procedure: the outer one gets a frame */
+    if (nested && !parent->framed) {
+        parent->framed = 1;
+        for (sy = locals; sy; sy = sy->next)
+            if (sy->k == S_VAR)
+                sy->framed = 1;
+    }
+    memset(&ctx, 0, sizeof ctx);
+    ctx.ps = s;
+    ctx.p = p;
+    ctx.vtail = &ctx.vars;
+    ctx.parent = parent;
+    cur_p = &ctx;
+    if (nested)
+        lstack[nl++] = locals;
+    modname = fmt("%s_%s", outer_mod, n);
+    ind = 1;
+    hoist_types++;
     inproc = 1;
+    plevel++;
     locals = NULL;
     curproc = p;
+    cur_framed = 0;
     for (i = 0; i < p->n; i++) {
         Sym *ps = declare(p->p[i].name, S_VAR, p->p[i].t);
         ps->isvarparam = p->p[i].isvar;
-        if (p->p[i].t->k == K_OPEN && !p->p[i].isvar) {
-            /* a value parameter is a copy */
-            char *el = open_leaf(p->p[i].t)->cname;
-            char *cnt = "1";
-            int k;
-            for (k = 0; k < open_dims(p->p[i].t); k++)
-                cnt = fmt("%s * (%s + 1)", cnt,
-                          high_name(fmt("v_%s", p->p[i].name), k));
-            emit("%s v_%s[%s];", el, p->p[i].name, cnt);
-            emit("memcpy(v_%s, v_%s_in, sizeof(v_%s));", p->p[i].name,
-                 p->p[i].name, p->p[i].name);
-        }
     }
     decls();
-    if (accept("BEGIN"))
+    if (accept("BEGIN")) {
+        FILE *o = cap_begin();
         stmts();
+        body = cap_end(o);
+    }
     expect("END");
     if (strcmp(ident(), n))
         die("the procedure end name does not match '%s'", n);
     expect(";");
-    ind--;
-    emit("}");
-    inproc = 0;
-    locals = NULL;
-    curproc = NULL;
+
+    /* the C function */
+    fr = fmt("Fr_%s", s->cname);
+    param_code(&ctx, ctx.framed, &fields, &init);
+    text = fmt("%s {\n", proto);
+    d = &done[ndone];
+    memset(d, 0, sizeof *d);
+    if (ctx.framed) {
+        LV *lv;
+        char *fl = nested ? fmt("  struct Fr_%s *_up;\n", parent->ps->cname) : "";
+        fl = fmt("%s%s", fl, fields);
+        for (lv = ctx.vars; lv; lv = lv->next)
+            fl = fmt("%s  %s\n", fl, lv->decl);
+        d->fwd = fmt("struct %s;\n", fr);
+        d->frame = fmt("struct %s {\n%s};\n", fr, fl);
+        text = fmt("%s  struct %s _fr;\n%s%s", text, fr,
+                   nested ? "  _fr._up = _up;\n" : "", init);
+    } else {
+        LV *lv;
+        for (lv = ctx.vars; lv; lv = lv->next)
+            text = fmt("%s  %s\n", text, lv->decl);
+        text = fmt("%s%s", text, init);
+    }
+    d->text = fmt("%s%s}\n\n", text, body);
+    d->proto = reuse ? NULL : fmt("%s;\n", proto);
+    ndone++;
+
+    ind = saved_ind;
+    hoist_types--;
+    modname = outer_mod;
+    plevel--;
+    inproc = nested;
+    locals = nested ? lstack[--nl] : NULL;
+    curproc = parent ? parent->p : NULL;
+    cur_p = parent;
+    cur_framed = parent ? parent->framed : 0;
+    if (!nested)
+        flush_procs();
 }
 
 char *lmod_inits[16];

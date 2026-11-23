@@ -4,9 +4,9 @@
  * Supported: modules (definition, implementation, program, local), IMPORT,
  * CONST TYPE VAR PROCEDURE, all statements, integers with the width rules
  * (VAL changes a width, literals have the type Z), BOOLEAN, CHAR, enumeration,
- * subrange, SET, POINTER, RECORD (variants), ARRAY (open arrays), procedure
- * types, opaque types, WITH, SYSTEM (BYTE, ADDRESS, ADR).
- * Not supported: REAL, typed set constructors, nested procedures.
+ * subrange, SET, REAL and LONGREAL, POINTER, RECORD (variants), ARRAY (open
+ * arrays of up to three dimensions), procedure types, nested procedures, opaque
+ * types, WITH, SYSTEM (BYTE, ADDRESS, ADR).
  * See status/modula2_fpc.md in daily-ops for the decisions.
  *
  * One pass: the parser checks the types and writes the C text on the way.

@@ -1,0 +1,14 @@
+MODULE nestbad1;
+TYPE Fn = PROCEDURE (LONGINT);
+VAR f: Fn;
+
+PROCEDURE P;
+  PROCEDURE Q(k: LONGINT);
+  BEGIN
+  END Q;
+BEGIN
+  f := Q
+END P;
+
+BEGIN
+END nestbad1.

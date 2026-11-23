@@ -34,10 +34,10 @@ static void variant_part(Type *t, Field ***tail)
         fl->t = tt;
         **tail = fl;
         *tail = &fl->next;
-        emit("%s f_%s;", tt->cname, tag);
+        emit_t("%s f_%s;", tt->cname, tag);
     }
     expect("OF");
-    emit("union {");
+    emit_t("union {");
     ind++;
     for (;;) {
         Field **before;
@@ -53,17 +53,17 @@ static void variant_part(Type *t, Field ***tail)
             } while (accept(","));
             expect(":");
         }
-        emit("struct {");
+        emit_t("struct {");
         ind++;
         before = *tail;
         field_list(t, tail);
         if (*tail == before)
-            emit("char _empty;");
+            emit_t("char _empty;");
         ind--;
-        emit("};");
+        emit_t("};");
     }
     ind--;
-    emit("};");
+    emit_t("};");
     expect("END");
 }
 
@@ -92,7 +92,7 @@ static void field_list(Type *t, Field ***tail)
             fl->t = ft;
             **tail = fl;
             *tail = &fl->next;
-            emit("%s f_%s;", ft->cname, names[i]);
+            emit_t("%s f_%s;", ft->cname, names[i]);
         }
     }
 }
@@ -112,16 +112,16 @@ static Type *record_type(const char *name)
         }
     if (!t) {
         t = mk(K_REC, 0, 0, cn);
-        emit("typedef struct %s %s;", cn, cn);
+        emit_t("typedef struct %s %s;", cn, cn);
     }
     t->k = K_REC;
     tail = &t->fields;
-    emit("struct %s {", cn);
+    emit_t("struct %s {", cn);
     ind++;
     field_list(t, &tail);
     expect("END");
     ind--;
-    emit("};");
+    emit_t("};");
     if (!t->fields)
         die("an empty record is not supported");
     return t;
@@ -189,7 +189,7 @@ Type *pointer_target(void)
                 f->t = mk(K_FWD, 0, 0, fmt("%s_%s", modname, n));
                 f->next = fwds;
                 fwds = f;
-                emit("typedef struct %s %s;", f->t->cname, f->t->cname);
+                emit_t("typedef struct %s %s;", f->t->cname, f->t->cname);
             }
             b = f->t;
         }
@@ -243,7 +243,7 @@ Type *type_(const char *hint)
             params = fmt("%s%s%s", params ? params : "", i ? ", " : "", one);
         }
         cn = hint ? fmt("%s_%s", modname, hint) : autoname();
-        emit("typedef %s (*%s)(%s);", pr->ret ? pr->ret->cname : "void", cn,
+        emit_t("typedef %s (*%s)(%s);", pr->ret ? pr->ret->cname : "void", cn,
              params ? params : "void");
         t = mk(K_PROC, 8, 0, cn);
         t->sig = pr;
@@ -253,7 +253,7 @@ Type *type_(const char *hint)
         char *cn = hint ? fmt("%s_%s", modname, hint) : autoname();
         long long n = 0;
         t = mk(K_ENUM, 4, 1, cn);
-        emit("typedef int32_t %s;", cn);
+        emit_t("typedef int32_t %s;", cn);
         do {
             Sym *s = declare(ident(), S_CONST, t);
             s->ce.t = t;
@@ -290,7 +290,7 @@ Type *type_(const char *hint)
         b = pointer_target();
         t = mk(K_PTR, 8, 0, cn);
         t->base = b;
-        emit("typedef %s *%s;", b->cname, cn);
+        emit_t("typedef %s *%s;", b->cname, cn);
         return t;
     }
     if (accept("ARRAY")) {
@@ -334,7 +334,7 @@ Type *type_(const char *hint)
             t->base = el;
             t->lo = lo[i];
             t->hi = hi[i];
-            emit("typedef struct { %s a[%lld]; } %s;", el->cname,
+            emit_t("typedef struct { %s a[%lld]; } %s;", el->cname,
                  hi[i] - lo[i] + 1, cn);
             el = t;
         }

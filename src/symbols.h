@@ -44,6 +44,8 @@ typedef struct Sym {
     int exported;       /* declared in a definition module */
     int defined;        /* an exported procedure that has its body */
     int imported;       /* copied by FROM m IMPORT x */
+    int level;          /* the nesting of the procedure that declares it, 0: module */
+    int framed;         /* a variable that lives in the frame of its procedure */
     struct Sym *next;
 } Sym;
 
@@ -58,6 +60,14 @@ typedef struct Module {
 extern Sym *globals, *locals, *predef;
 
 extern int inproc;
+
+/* the nesting level of the procedure being read (0: module level), whether
+   its variables are in a frame, and the lists of the local names of the
+   enclosing procedures */
+extern int plevel;
+extern int cur_framed;
+extern Sym *lstack[8];
+extern int nl;
 
 extern char *modname;
 

@@ -4,6 +4,10 @@
 Sym *globals, *locals, *predef;
 
 int inproc;
+int plevel;
+int cur_framed;
+Sym *lstack[8];
+int nl;
 
 char *modname;
 
@@ -28,8 +32,12 @@ Sym *lookup_in(Sym *l, const char *n)
 Sym *find(const char *n)
 {
     Sym *s = NULL;
-    if (inproc)
+    if (inproc) {
+        int i;
         s = lookup_in(locals, n);
+        for (i = nl - 1; !s && i >= 0; i--)
+            s = lookup_in(lstack[i], n);
+    }
     if (!s)
         s = lookup_in(globals, n);
     if (!s)
@@ -66,6 +74,8 @@ Sym *declare(const char *name, SKind k, Type *t)
     s->t = t;
     s->cname = inproc ? fmt("v_%s", name) : fmt("%s_%s", modname, name);
     s->exported = indef;
+    s->level = plevel;
+    s->framed = plevel > 0 && cur_framed && k == S_VAR;
     s->next = *list;
     *list = s;
     return s;

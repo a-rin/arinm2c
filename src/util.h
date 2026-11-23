@@ -22,4 +22,14 @@ char *cstr(const char *s);
 
 char *cchar(unsigned char c);
 
+/* the C text of the types declared in procedures (it goes before the C
+   functions: C has no local functions) */
+extern char *types_text;
+extern int hoist_types;
+void emit_t(const char *f, ...);
+
+/* write the text of the following emit calls to a string instead of the file */
+FILE *cap_begin(void);
+char *cap_end(FILE *old);
+
 #endif
