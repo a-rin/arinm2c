@@ -56,6 +56,11 @@ void check_assign(Type *dst, Expr *e, const char *what)
             die("the constant %lld is outside the range %lld..%lld", e->v,
                 dst->slo, dst->shi);
         break;
+    case K_REAL:
+        ok = s->k == K_RZ || s == dst;
+        if (s->k == K_REAL && !ok)
+            die("cannot %s %s to %s: use VAL", what, tname(s), tname(dst));
+        break;
     case K_BOOL: ok = s->k == K_BOOL; break;
     case K_CHAR: ok = s->k == K_CHAR; break;
     case K_ENUM: ok = s->k == K_ENUM && H(s) == H(dst); break;
@@ -80,6 +85,8 @@ void check_assign(Type *dst, Expr *e, const char *what)
 char *conv(Type *dst, Expr *e)
 {
     if (dst->k == K_INT && isint(e->t))
+        return fmt("(%s)(%s)", dst->cname, e->c);
+    if (dst->k == K_REAL && isreal(e->t))
         return fmt("(%s)(%s)", dst->cname, e->c);
     return e->c;
 }
@@ -347,6 +354,13 @@ static Expr factor(void)
         next();
         return e;
     }
+    if (tok.k == T_REAL) {
+        e.t = t_rz;
+        e.c = tok.s;
+        e.rconst = 1;
+        next();
+        return e;
+    }
     if (tok.k == T_STR) {
         e.sraw = tok.s;
         if (strlen(tok.s) == 1) {
@@ -456,6 +470,11 @@ static Expr factor(void)
                 e.c = fmt("((uint64_t)(uintptr_t)(%s))", b.c);
                 return e;
             }
+            if (a.istype && a.t->k == K_REAL && isreal(b.t)) {
+                e.t = a.t;
+                e.c = fmt("((%s)(%s))", a.t->cname, b.c);
+                return e;
+            }
             if (!a.istype || (a.t->k != K_INT && a.t->k != K_ENUM &&
                               a.t->k != K_CHAR))
                 die("VAL: an ordinal type expected as the first argument");
@@ -464,6 +483,28 @@ static Expr factor(void)
                 die("VAL: an ordinal value expected");
             e.t = a.t;
             e.c = fmt("((%s)(%s))", a.t->cname, b.c);
+            return e;
+        }
+        if (!strcmp(n, "FLOAT")) {
+            Expr a;
+            expect("(");
+            a = expr();
+            expect(")");
+            if (!isint(a.t))
+                die("FLOAT: an integer expected");
+            e.t = t_real;
+            e.c = fmt("((float)(%s))", a.c);
+            return e;
+        }
+        if (!strcmp(n, "TRUNC")) {
+            Expr a;
+            expect("(");
+            a = expr();
+            expect(")");
+            if (!isreal(a.t))
+                die("TRUNC: a real number expected");
+            e.t = t_z;
+            e.c = fmt("((int64_t)(%s))", a.c);
             return e;
         }
         if (!strcmp(n, "ORD")) {
@@ -505,8 +546,8 @@ static Expr factor(void)
             expect("(");
             a = expr();
             expect(")");
-            if (!isint(a.t) || (a.t->k == K_INT && !a.t->sign))
-                die("ABS: a signed integer expected");
+            if (!isreal(a.t) && (!isint(a.t) || (a.t->k == K_INT && !a.t->sign)))
+                die("ABS: a signed number expected");
             e.t = a.t;
             e.c = fmt("((%s)((%s) < 0 ? -(%s) : (%s)))", a.t->cname, a.c, a.c,
                       a.c);
@@ -543,6 +584,21 @@ static Expr intop(const char *op, Expr a, Expr b)
     return e;
 }
 
+/* + - * and the real division (op "/r") */
+static Expr realop(const char *op, Expr a, Expr b)
+{
+    Expr e;
+    Type *rt = rarith(a.t, b.t);
+    const char *co = !strcmp(op, "/r") ? "/" : op;
+    memset(&e, 0, sizeof e);
+    if (!strcmp(op, "%"))
+        die("MOD needs integers");
+    e.t = rt;
+    e.rconst = a.rconst && b.rconst;
+    e.c = fmt("((%s)(%s %s %s))", rt->cname, a.c, co, b.c);
+    return e;
+}
+
 static Expr setop(const char *op, Expr a, Expr b)
 {
     Expr e;
@@ -559,6 +615,8 @@ static Expr setop(const char *op, Expr a, Expr b)
 
 static Expr addop(const char *op, Expr a, Expr b)
 {
+    if (isreal(a.t) || isreal(b.t))
+        return realop(op, a, b);
     if (isset(a.t) || isset(b.t))
         return setop(op, a, b);
     return intop(op, a, b);
@@ -584,12 +642,18 @@ static Expr term(void)
             a.isconst = 0;
             a.lvalue = 0;
             continue;
-        } else if (is("/"))
-            die("'/' needs REAL, which is not supported yet");
+        } else if (accept("/"))
+            op = "/r";
         else
             return a;
         b = factor();
-        if (isset(a.t) || isset(b.t)) {
+        if (isreal(a.t) || isreal(b.t)) {
+            if (!strcmp(op, "/"))
+                die("DIV needs integers");
+            a = realop(op, a, b);
+        } else if (!strcmp(op, "/r")) {
+            die("'/' needs real numbers (DIV divides integers)");
+        } else if (isset(a.t) || isset(b.t)) {
             if (strcmp(op, "*"))
                 die("this operator is not defined for sets");
             a = setop(op, a, b);
@@ -607,7 +671,10 @@ static Expr simple(void)
     else
         accept("+");
     a = term();
-    if (neg) {
+    if (neg && isreal(a.t)) {
+        a.c = fmt("(-%s)", a.c);
+        a.lvalue = 0;
+    } else if (neg) {
         if (!isint(a.t) || (a.t->k == K_INT && !a.t->sign))
             die("unary minus needs a signed integer");
         if (a.isconst)
@@ -675,7 +742,9 @@ Expr expr(void)
             die("this comparison is not defined for sets");
         return e;
     }
-    if (isint(a.t) && isint(b.t))
+    if (isreal(a.t) || isreal(b.t))
+        rarith(a.t, b.t);
+    else if (isint(a.t) && isint(b.t))
         arith(a.t, b.t);
     else if (a.t->k == K_CHAR && b.t->k == K_CHAR)
         ;
@@ -702,7 +771,7 @@ Expr constexpr_(void)
 {
     Expr e = expr();
     if (!e.isconst && !(e.t->k == K_CHAR && e.sraw) && e.t->k != K_BOOL &&
-        e.t->k != K_STR)
+        e.t->k != K_STR && !(e.t->k == K_RZ && e.rconst))
         die("a constant expression is expected");
     return e;
 }

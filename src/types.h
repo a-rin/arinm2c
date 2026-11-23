@@ -5,7 +5,8 @@
 #include "lex.h"
 
 typedef enum { K_INT, K_BOOL, K_CHAR, K_PTR, K_REC, K_ARR, K_Z, K_STR,
-               K_NIL, K_FWD, K_ENUM, K_OPEN, K_SET, K_SETLIT, K_PROC } Kind;
+               K_NIL, K_FWD, K_ENUM, K_OPEN, K_SET, K_SETLIT, K_PROC, K_REAL,
+               K_RZ } Kind;
 
 typedef struct Type Type;
 
@@ -34,13 +35,17 @@ Type *mk(Kind k, int size, int sign, const char *cn);
 
 Type *H(Type *t);
 
-extern Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32, *t_int64, *t_card64, *t_bool, *t_char, *t_z, *t_str, *t_nil, *t_byte, *t_addr, *t_setlit;
+extern Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32, *t_int64, *t_card64, *t_bool, *t_char, *t_z, *t_str, *t_nil, *t_byte, *t_addr, *t_setlit, *t_real, *t_lreal, *t_rz;
 
 const char *tname(Type *t);
 
 int isint(Type *t);
 
 Type *arith(Type *a, Type *b);
+
+int isreal(Type *t);
+
+Type *rarith(Type *a, Type *b);
 
 /* ARRAY OF ARRAY OF T: the number of dimensions, and T */
 int open_dims(Type *t);

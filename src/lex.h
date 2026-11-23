@@ -4,7 +4,7 @@
 
 #include "util.h"
 
-enum { T_EOF, T_ID, T_KW, T_SYM, T_NUM, T_STR };
+enum { T_EOF, T_ID, T_KW, T_SYM, T_NUM, T_STR, T_REAL };
 
 typedef struct {
     int k;

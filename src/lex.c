@@ -25,6 +25,37 @@ static int iskw(const char *s)
     return 0;
 }
 
+/* a real number: digits . digits [E [+|-] digits] */
+static int real_literal(void)
+{
+    size_t q = pos;
+    char *p;
+    while (isdigit((unsigned char)src[q]))
+        q++;
+    if (q == pos || src[q] != '.' || !isdigit((unsigned char)src[q + 1]))
+        return 0;
+    q++;
+    while (isdigit((unsigned char)src[q]))
+        q++;
+    if (src[q] == 'E') {
+        size_t r = q + 1;
+        if (src[r] == '+' || src[r] == '-')
+            r++;
+        if (isdigit((unsigned char)src[r])) {
+            while (isdigit((unsigned char)src[r]))
+                r++;
+            q = r;
+        }
+    }
+    p = malloc(q - pos + 1);
+    memcpy(p, src + pos, q - pos);
+    p[q - pos] = 0;
+    tok.s = p;
+    tok.k = T_REAL;
+    pos = q;
+    return 1;
+}
+
 void next(void)
 {
     size_t st;
@@ -72,6 +103,8 @@ void next(void)
         p[pos - st] = 0;
         tok.s = p;
         tok.k = iskw(p) ? T_KW : T_ID;
+    } else if (real_literal()) {
+        /* tok is set */
     } else if (isdigit((unsigned char)src[pos])) {
         size_t n;
         char last, *p;

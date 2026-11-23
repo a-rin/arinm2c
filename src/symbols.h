@@ -8,6 +8,7 @@ typedef struct Expr {
     char *c;            /* the C text */
     Type *t;
     int isconst;        /* an integer constant with the value v */
+    int rconst;         /* a constant real expression */
     long long v;
     int lvalue;
     int istype;         /* a type name (only as an argument of SIZEOF, VAL) */
