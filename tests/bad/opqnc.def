@@ -1,0 +1,4 @@
+DEFINITION MODULE opqnc;
+TYPE T;
+PROCEDURE F;
+END opqnc.

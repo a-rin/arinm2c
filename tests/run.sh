@@ -20,6 +20,17 @@ for m in tests/lib/*.mod; do
   libs="$libs $tmp/$b.c"
 done
 for c in tests/lib/*.c; do libs="$libs $c"; done
+# tests/bad: modules that must be rejected (NAME.def, NAME.mod, NAME.err)
+for m in tests/bad/*.mod; do
+  b=$(basename "$m" .mod); n=$((n+1))
+  if ./arinm2c -I tests/bad "$m" -o "$tmp/bad_$b.c" 2>"$tmp/bad_$b.msg"; then
+    echo "FAIL bad/$b: translation should have failed"; fail=$((fail+1))
+  elif grep -qF "$(cat "tests/bad/$b.err")" "$tmp/bad_$b.msg"; then
+    echo "ok   bad/$b (rejected)"
+  else
+    echo "FAIL bad/$b: message was: $(cat "$tmp/bad_$b.msg")"; fail=$((fail+1))
+  fi
+done
 for m in tests/*.mod; do
   b=$(basename "$m" .mod); n=$((n+1))
   if [ -f "tests/$b.err" ]; then

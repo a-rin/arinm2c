@@ -1,0 +1,3 @@
+DEFINITION MODULE Colors;
+TYPE Color = (red, green, blue);
+END Colors.

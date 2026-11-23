@@ -48,6 +48,23 @@ static char *findfile(const char *name, const char *ext)
 
 static void import_list(void);
 
+int already_aliased(Sym *s)
+{
+    Sym *o = lookup_in(globals, s->name);
+    return o && o->imported && o->k == S_CONST && s->k == S_CONST && o->t == s->t;
+}
+
+void alias_enum_consts(Sym *ts, Sym *list)
+{
+    Sym *c;
+    if (ts->k != S_TYPE || ts->t->k != K_ENUM || ts->t->sub)
+        return;
+    for (c = list; c; c = c->next)
+        if (c->k == S_CONST && c->t == ts->t && !c->imported &&
+            !lookup_in(globals, c->name))
+            alias(c);
+}
+
 /* the name of a module is the name of its file, with the same case */
 static void check_filename(const char *name)
 {
@@ -163,7 +180,9 @@ static void import_list(void)
                         break;
                 if (!s)
                     die("module %s has no '%s'", md->name, n);
-                alias(s);
+                if (!already_aliased(s))
+                    alias(s);
+                alias_enum_consts(s, md->syms);
             } while (accept(","));
             expect(";");
             use_module(md);

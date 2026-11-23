@@ -1,0 +1,3 @@
+DEFINITION MODULE opqrec;
+TYPE T;
+END opqrec.

@@ -1,0 +1,3 @@
+DEFINITION MODULE opqdup;
+TYPE T = RECORD v: INTEGER END;
+END opqdup.

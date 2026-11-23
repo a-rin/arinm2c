@@ -65,6 +65,9 @@ static void type_decl(void)
             if (o && o->k == S_TYPE && o->exported && o->t->copaque &&
                 !o->t->base) {
                 expect("=");
+                if (!is("POINTER"))
+                    die("the opaque type '%s' must be completed by a pointer "
+                        "type (POINTER TO ...); a subrange is not supported", n);
                 expect("POINTER");
                 expect("TO");
                 o->t->base = pointer_target();
@@ -380,7 +383,9 @@ static void local_module(void)
                         break;
                 if (!sy)
                     die("module %s has no '%s'", md->name, n);
-                alias(sy);
+                if (!already_aliased(sy))
+                    alias(sy);
+                alias_enum_consts(sy, md->syms);
             } while (accept(","));
             expect(";");
             if (!ms)
@@ -449,11 +454,21 @@ static void local_module(void)
         Module *md = calloc(1, sizeof *md);
         md->name = name;
         for (i = 0; i < nexp; i++) {
-            Sym *c = calloc(1, sizeof *c);
+            Sym *c = calloc(1, sizeof *c), *k;
             *c = *ex[i];
             c->imported = 0;
             c->next = md->syms;
             md->syms = c;
+            /* the constants of an exported enumeration type */
+            if (ex[i]->k == S_TYPE && ex[i]->t->k == K_ENUM && !ex[i]->t->sub)
+                for (k = inner; k; k = k->next)
+                    if (k->k == S_CONST && k->t == ex[i]->t) {
+                        Sym *cc = calloc(1, sizeof *cc);
+                        *cc = *k;
+                        cc->imported = 0;
+                        cc->next = md->syms;
+                        md->syms = cc;
+                    }
         }
         if (lookup_in(globals, name))
             die("'%s' is declared twice", name);
@@ -464,8 +479,11 @@ static void local_module(void)
         sy->next = globals;
         globals = sy;
     } else {
-        for (i = 0; i < nexp; i++)
-            alias(ex[i]);
+        for (i = 0; i < nexp; i++) {
+            if (!already_aliased(ex[i]))
+                alias(ex[i]);
+            alias_enum_consts(ex[i], inner);
+        }
     }
 }
 
