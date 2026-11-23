@@ -1,0 +1,23 @@
+IMPLEMENTATION MODULE Q;
+TYPE
+  Rec = RECORD v: INTEGER END;
+  T = POINTER TO Rec;
+
+PROCEDURE Make(): T;
+VAR p: T;
+BEGIN
+  NEW(p);
+  p^.v := 0;
+  RETURN p
+END Make;
+
+PROCEDURE Put(q: T; v: INTEGER);
+BEGIN
+  q^.v := v
+END Put;
+
+PROCEDURE Get(q: T): INTEGER;
+BEGIN
+  RETURN q^.v
+END Get;
+END Q.

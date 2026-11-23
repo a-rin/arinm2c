@@ -1,0 +1,4 @@
+MODULE C3;
+FROM Q2 IMPORT T, Make;
+VAR a: T; p: POINTER TO INTEGER;
+BEGIN a := Make(); p := a END C3.

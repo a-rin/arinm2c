@@ -1,0 +1,13 @@
+MODULE H1;
+MODULE Counter;
+  EXPORT Get;
+  VAR n: INTEGER;
+  PROCEDURE Get(): INTEGER;
+  BEGIN RETURN n END Get;
+BEGIN
+  n := 10
+END Counter;
+BEGIN
+  n := 99;
+  WRITELN(Get())
+END H1.
