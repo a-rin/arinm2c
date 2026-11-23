@@ -4,7 +4,8 @@ A translator from Modula-2 (PIM4) to C, written in C. It is a hobby project and
 a work in progress.
 
 The translator reads one module at a time and writes C. It checks the types as
-it parses, so a program that it accepts is type correct by the rules below.
+it parses and reports the first error. The checks are not complete and have
+not been tested against a large body of Modula-2 code.
 
 ## Build and test
 
