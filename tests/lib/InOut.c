@@ -1,4 +1,5 @@
 /* InOut has no implementation module: it is written in C */
+#define M2_IMPLEMENTS_InOut
 #include <stdint.h>
 #include <stdio.h>
 #include "InOut.h"

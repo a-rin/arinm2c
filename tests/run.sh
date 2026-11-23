@@ -105,6 +105,31 @@ if ./arinm2c -I tests/bad -M tests/bad/cyc.mod -o "$tmp/cyc.mk" 2>"$tmp/cyc.err"
   echo "FAIL make/cyc: -M should have failed"; fail=$((fail+1))
 elif grep -qF "circular import" "$tmp/cyc.err"; then echo "ok   make/cyc (rejected)"
 else echo "FAIL make/cyc: $(cat "$tmp/cyc.err")"; fail=$((fail+1)); fi
+n=$((n+1))
+if ${CC:-cc} -o "$tmp/md5test" tests/md5test.c src/md5.c && "$tmp/md5test"; then echo "ok   md5"
+else echo "FAIL md5"; fail=$((fail+1)); fi
+# the version of a definition module: objects made with the same version link
+# (also when only comments or the layout differ), a different version does not
+vbuild() {  # vbuild DIR_OF_Vx.def DIR_OF_Vx.def_for_the_client: link, status
+  ./arinm2c -I "$1" tests/ver/Vx.mod -o "$tmp/vx_impl.c" &&
+  ./arinm2c -I "$2" tests/ver/vmain.mod -o "$tmp/vmain.c" &&
+  mkdir -p "$tmp/vh1" "$tmp/vh2" &&
+  ./arinm2c -I tests/ver "$1/Vx.def" -o "$tmp/vh1/Vx.h" &&
+  ./arinm2c -I tests/ver "$2/Vx.def" -o "$tmp/vh2/Vx.h" &&
+  ${CC:-cc} -std=c11 -fwrapv -I "$tmp/vh1" -c "$tmp/vx_impl.c" -o "$tmp/Vx.o" &&
+  ${CC:-cc} -std=c11 -fwrapv -I "$tmp/vh2" -c "$tmp/vmain.c" -o "$tmp/vmain.o" &&
+  ${CC:-cc} -o "$tmp/vmain" "$tmp/vmain.o" "$tmp/Vx.o" 2>"$tmp/vlink.err"
+}
+n=$((n+1))
+if vbuild tests/ver/v1 tests/ver/v1 && [ "$("$tmp/vmain")" = 2 ]; then echo "ok   ver/same"
+else echo "FAIL ver/same: the same version does not link"; fail=$((fail+1)); fi
+n=$((n+1))
+if vbuild tests/ver/v1 tests/ver/v1c && [ "$("$tmp/vmain")" = 2 ]; then echo "ok   ver/layout (comments and layout are not a version)"
+else echo "FAIL ver/layout: a changed comment is a new version"; fail=$((fail+1)); fi
+n=$((n+1))
+if vbuild tests/ver/v1 tests/ver/v2; then echo "FAIL ver/mixed: two versions linked"; fail=$((fail+1))
+elif grep -q "Vx__def_" "$tmp/vlink.err"; then echo "ok   ver/mixed (the link fails)"
+else echo "FAIL ver/mixed: $(head -3 "$tmp/vlink.err")"; fail=$((fail+1)); fi
 rm -rf "$tmp"
 echo "$n tests, $fail failed"
 [ "$fail" = 0 ]

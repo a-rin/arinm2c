@@ -34,7 +34,7 @@ static void write_args(int newline)
                 else if (t->k == K_INT)
                     emit("printf(\"%%llu\", (unsigned long long)(%s));", a.c);
                 else if (t->k == K_REAL || t->k == K_RZ)
-                    emit("printf(\"%%g\", (double)(%s));", a.c);
+                    emit("printf(\"%%Lg\", (long double)(%s));", a.c);
                 else if (t->k == K_CHAR)
                     emit("putchar(%s);", a.c);
                 else if (t->k == K_STR)

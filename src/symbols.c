@@ -126,9 +126,11 @@ void init_predef(void)
         bs->shi = 31;
         pre("BITSET", S_TYPE, bs);
     }
-    t_real = mk(K_REAL, 4, 1, "float");
-    t_lreal = mk(K_REAL, 8, 1, "double");
+    t_sreal = mk(K_REAL, 4, 1, "float");
+    t_real = mk(K_REAL, 8, 1, "double");
+    t_lreal = mk(K_REAL, sizeof(long double), 1, "long double");
     t_rz = mk(K_RZ, 0, 1, "double");
+    pre("SHORTREAL", S_TYPE, t_sreal);
     pre("REAL", S_TYPE, t_real);
     pre("LONGREAL", S_TYPE, t_lreal);
     pre("INTEGER", S_TYPE, t_int32);

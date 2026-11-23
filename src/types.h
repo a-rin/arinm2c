@@ -35,7 +35,7 @@ Type *mk(Kind k, int size, int sign, const char *cn);
 
 Type *H(Type *t);
 
-extern Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32, *t_int64, *t_card64, *t_bool, *t_char, *t_z, *t_str, *t_nil, *t_byte, *t_addr, *t_setlit, *t_real, *t_lreal, *t_rz;
+extern Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32, *t_int64, *t_card64, *t_bool, *t_char, *t_z, *t_str, *t_nil, *t_byte, *t_addr, *t_setlit, *t_sreal, *t_real, *t_lreal, *t_rz;
 
 const char *tname(Type *t);
 

@@ -544,7 +544,7 @@ static Expr factor(void)
             if (!isint(a.t))
                 die("FLOAT: an integer expected");
             e.t = t_real;
-            e.c = fmt("((float)(%s))", a.c);
+            e.c = fmt("((double)(%s))", a.c);
             return e;
         }
         if (!strcmp(n, "TRUNC")) {

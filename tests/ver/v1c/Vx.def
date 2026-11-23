@@ -1,0 +1,4 @@
+(* the same definition module, another layout and comments *)
+DEFINITION MODULE Vx;
+  PROCEDURE Two(): INTEGER;   (* two *)
+END Vx.

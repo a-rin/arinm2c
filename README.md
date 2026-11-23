@@ -57,7 +57,7 @@ program calls the ones of the imported modules first.
   exported names are visible outside), `IMPORT`, `FROM ... IMPORT`, opaque types.
 * Statements: all of those of PIM4, including `CASE`, `LOOP`/`EXIT`,
   `FOR ... BY` and `WITH`.
-* Types: integers, `REAL` and `LONGREAL`, `BOOLEAN`, `CHAR`, enumerations,
+* Types: integers, `SHORTREAL`, `REAL` and `LONGREAL`, `BOOLEAN`, `CHAR`, enumerations,
   subranges, `SET OF`, `POINTER`, `RECORD` (with variants), `ARRAY` (also open
   arrays, up to three dimensions), procedure types.
 * Procedures may be nested. C has no nested functions: a procedure that has
@@ -75,12 +75,23 @@ widths (or of the same width and different signs) cannot be mixed in an
 expression: `VAL(INT64, a)` converts. An integer constant has no width of its
 own and fits any integer type.
 
+### Versions of definition modules
+
+The header of a module that has code (`X.mod` or a hand written `X.c`) has the
+MD5 of its definition module (of its tokens: a changed comment or layout is not
+a new version) as `X_DEF_MD5`. Every C file that includes `X.h` refers to a
+symbol `X__def_<md5>`, and only the implementation defines it (a hand written
+`X.c` writes `#define M2_IMPLEMENTS_X` before it includes `X.h`). So objects
+and libraries made with two different versions of `X.def` do not link: the
+linker reports the undefined `X__def_<md5>`.
+
 ### Real numbers
 
-`REAL` is a C `float`, `LONGREAL` a `double`. As for the integers, `REAL` and
-`LONGREAL` cannot be mixed in an expression: `VAL(LONGREAL, x)` converts. A
-real literal (`2.5`, `1.5E3`) fits both. `FLOAT(i)` makes a `REAL` of an
-integer and `TRUNC(x)` an integer of a real number.
+`SHORTREAL` is a C `float`, `REAL` a `double`, `LONGREAL` a `long double` (the
+width of a `long double` depends on the platform: 80 bits on x86, 128 on
+aarch64 Linux). As for the integers, the three cannot be mixed in an expression:
+`VAL(LONGREAL, x)` converts. A real literal (`2.5`, `1.5E3`) fits all of them.
+`FLOAT(i)` makes a `REAL` of an integer and `TRUNC(x)` an integer of a real number.
 
 ### Built in for tests
 

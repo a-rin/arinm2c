@@ -15,7 +15,7 @@ Type *H(Type *t) { return t->host ? t->host : t; }
 
 Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32,
     *t_int64, *t_card64, *t_bool, *t_char, *t_z, *t_str, *t_nil, *t_byte,
-    *t_addr, *t_setlit, *t_real, *t_lreal, *t_rz;
+    *t_addr, *t_setlit, *t_sreal, *t_real, *t_lreal, *t_rz;
 
 const char *tname(Type *t)
 {
@@ -23,7 +23,7 @@ const char *tname(Type *t)
     case K_INT: return t->cname;
     case K_Z: return "an integer constant";
     case K_RZ: return "a real constant";
-    case K_REAL: return t->size == 4 ? "REAL" : "LONGREAL";
+    case K_REAL: return t == t_sreal ? "SHORTREAL" : t == t_real ? "REAL" : "LONGREAL";
     case K_BOOL: return "BOOLEAN";
     case K_CHAR: return "CHAR";
     case K_STR: return "a string";

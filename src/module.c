@@ -1,5 +1,6 @@
 /* module: definition, implementation and program modules; IMPORT */
 #include "arinm2c.h"
+#include "md5.h"
 
 char *incdirs[16];
 
@@ -75,6 +76,54 @@ static void check_filename(const char *name)
         die("the module name '%s' does not match the file name '%s'", name, b);
 }
 
+/* the version of a definition module: the MD5 of its tokens, so that a change
+   of a comment or of the layout is not a new version (the tokens are
+   separated by a newline: a changed name or number is a new version) */
+static void def_md5(const char *text, char out[33])
+{
+    const char *osrc = src;
+    size_t opos = pos, n = 0, cap = 4096;
+    int ocur = curline, oerr = errline;
+    Tok otok = tok;
+    char *buf = malloc(cap);
+    src = text;
+    pos = 0;
+    curline = 1;
+    for (next(); tok.k != T_EOF; next()) {
+        char *t = fmt("%d %s %lld\n", tok.k, tok.s, tok.v);
+        size_t k = strlen(t);
+        while (n + k > cap)
+            buf = realloc(buf, cap *= 2);
+        memcpy(buf + n, t, k);
+        n += k;
+    }
+    md5_hex(buf, n, out);
+    free(buf);
+    src = osrc;
+    pos = opos;
+    curline = ocur;
+    errline = oerr;
+    tok = otok;
+}
+
+/* the header of a module that has code: every file that includes it refers to
+   the symbol X__def_<md5>, only the implementation defines it (the module
+   defines M2_IMPLEMENTS_X before it includes the header), so the link of
+   objects made with two different versions of the definition module fails */
+static void version_check(const char *name, const char *md5)
+{
+    emit("#define %s_DEF_MD5 \"%s\"", name, md5);
+    if (!findfile(name, ".mod") && !findfile(name, ".c"))
+        return;
+    emit("#ifdef M2_IMPLEMENTS_%s", name);
+    emit("const char %s__def_%s = 0;", name, md5);
+    emit("#else");
+    emit("extern const char %s__def_%s;", name, md5);
+    emit("static const char *const %s__use_%s __attribute__((used)) = &%s__def_%s;",
+         name, md5, name, md5);
+    emit("#endif");
+}
+
 static void save(Saved *v)
 {
     v->src = src; v->srcname = srcname; v->pos = pos; v->curline = curline;
@@ -100,7 +149,7 @@ Module *load_module(const char *name)
 {
     Module *m;
     Saved sv;
-    char *path, *text;
+    char *path, *text, md5[33];
     static char *loading[16];
     static int nloading;
     int i;
@@ -118,6 +167,7 @@ Module *load_module(const char *name)
     loading[nloading++] = fmt("%s", name);
     text = readfile(path);
     save(&sv);
+    def_md5(text, md5);
     src = text;
     srcname = path;
     pos = 0;
@@ -134,6 +184,7 @@ Module *load_module(const char *name)
     m = calloc(1, sizeof *m);
     m->name = (char *)name;
     m->hasimpl = findfile(name, ".mod") != NULL;
+    memcpy(m->md5, md5, sizeof md5);
     def_module(name, 0);
     m->syms = globals;
     m->next = mods;
@@ -296,6 +347,11 @@ void def_module(const char *expected, int header)
         emit("#ifndef %s_H", name);
         emit("#define %s_H", name);
         emit("#include <stdint.h>");
+        {
+            char md5[33];
+            def_md5(src, md5);
+            version_check(name, md5);
+        }
     }
     import_list();
     decls();
@@ -342,6 +398,7 @@ void impl_module(void)
         globals = c;
     }
     std_includes();
+    emit("#define M2_IMPLEMENTS_%s", modname);
     emit("#include \"%s.h\"", modname);
     import_list();
     for (s = globals; s; s = s->next)

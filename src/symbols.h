@@ -53,6 +53,7 @@ typedef struct Module {
     char *name;
     Sym *syms;          /* what the definition module declares */
     int hasimpl;        /* an implementation module (.mod) exists */
+    char md5[33];       /* the version of the definition module */
     int builtin;        /* SYSTEM */
     struct Module *next;
 } Module;
