@@ -88,10 +88,36 @@ char *conv(Type *dst, Expr *e)
 static char *open_arg(Type *pt, Expr *a, const char *who)
 {
     Type *el = pt->base;
+    int n = open_dims(pt), k;
+    if (n > 1) {
+        /* ARRAY OF ARRAY OF T: the elements are contiguous */
+        Type *leaf = open_leaf(pt);
+        char *r;
+        if (a->t->k == K_OPEN && open_dims(a->t) == n && open_leaf(a->t) == leaf) {
+            r = fmt("%s", a->c);
+            for (k = 0; k < n; k++)
+                r = fmt("%s, %s", r, a->highs[k]);
+            return r;
+        } else {
+            Type *x = a->t;
+            r = fmt("(%s)&%s", pt->cname, a->c);
+            for (k = 0; k < n; k++) {
+                if (x->k != K_ARR)
+                    die("the argument of '%s' does not fit the open array "
+                        "parameter", who);
+                r = fmt("%s, %lld", r, x->hi - x->lo);
+                x = x->base;
+            }
+            if (x != leaf || !a->lvalue)
+                die("the argument of '%s' does not fit the open array "
+                    "parameter", who);
+            return r;
+        }
+    }
     if (el == t_byte) {
         if (a->t->k == K_OPEN)
             return fmt("(uint8_t *)%s, ((%s) + 1) * (int64_t)sizeof(*%s) - 1",
-                       a->c, a->high, a->c);
+                       a->c, a->highs[0], a->c);
         if (!a->lvalue)
             die("an argument of '%s' for ARRAY OF BYTE must be a variable", who);
         return fmt("(uint8_t *)&%s, (int64_t)sizeof(%s) - 1", a->c, a->c);
@@ -104,7 +130,7 @@ static char *open_arg(Type *pt, Expr *a, const char *who)
     if (a->t->k == K_ARR && a->t->base == el)
         return fmt("%s.a, %lld", a->c, a->t->hi - a->t->lo);
     if (a->t->k == K_OPEN && a->t->base == el)
-        return fmt("%s, %s", a->c, a->high);
+        return fmt("%s, %s", a->c, a->highs[0]);
     die("the argument of '%s' does not fit the open array parameter", who);
 }
 
@@ -209,8 +235,11 @@ Expr designator(Sym *s)
                                                : s->cname;
     e.t = s->t;
     e.lvalue = 1;
-    if (s->t->k == K_OPEN)
-        e.high = fmt("%s_high", s->cname);
+    if (s->t->k == K_OPEN) {
+        int k;
+        for (k = 0; k < open_dims(s->t); k++)
+            e.highs[k] = high_name(s->cname, k);
+    }
     return designator_tail(e);
 }
 
@@ -232,11 +261,22 @@ Expr designator_tail(Expr e)
             do {
                 Expr i = expr();
                 if (e.t->k == K_OPEN) {
+                    int k;
                     if (!isint(i.t))
                         die("an index must be an integer");
-                    e.c = fmt("%s[(int64_t)(%s)]", e.c, i.c);
+                    if (e.t->base->k == K_OPEN) {
+                        char *stride = "1";
+                        for (k = 1; e.highs[k]; k++)
+                            stride = fmt("%s * ((%s) + 1)", stride, e.highs[k]);
+                        e.c = fmt("(%s + (int64_t)(%s) * %s)", e.c, i.c, stride);
+                        for (k = 0; k < 3; k++)
+                            e.highs[k] = e.highs[k + 1];
+                        e.highs[3] = NULL;
+                    } else {
+                        e.c = fmt("%s[(int64_t)(%s)]", e.c, i.c);
+                        e.highs[0] = NULL;
+                    }
                     e.t = e.t->base;
-                    e.high = NULL;
                     continue;
                 }
                 if (e.t->k != K_ARR)
@@ -360,6 +400,13 @@ static Expr factor(void)
                 return call(s, 1);
             return procvalue(s);
         }
+        if (s && s->k == S_TYPE && s->t->k == K_SET && is("{")) {
+            /* Digits{1, 2} */
+            next();
+            e = set_constructor();
+            e.t = s->t;
+            return e;
+        }
         if (s)
             return finish_call(designator(s), n);
         /* built-in functions */
@@ -370,7 +417,7 @@ static Expr factor(void)
             expect(")");
             if (a.t->k == K_OPEN) {
                 e.t = t_z;
-                e.c = fmt("((int64_t)(%s))", a.high);
+                e.c = fmt("((int64_t)(%s))", a.highs[0]);
                 return e;
             }
             if (a.t->k == K_ARR)

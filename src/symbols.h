@@ -12,7 +12,7 @@ typedef struct Expr {
     int lvalue;
     int istype;         /* a type name (only as an argument of SIZEOF, VAL) */
     char *sraw;         /* the bytes of a string or CHAR constant */
-    char *high;         /* an open array: the C text of HIGH */
+    char *highs[4];     /* an open array: the C text of HIGH of each dimension */
 } Expr;
 
 typedef struct Param {

@@ -42,4 +42,14 @@ int isint(Type *t);
 
 Type *arith(Type *a, Type *b);
 
+/* ARRAY OF ARRAY OF T: the number of dimensions, and T */
+int open_dims(Type *t);
+Type *open_leaf(Type *t);
+/* the C text of the name of the high bound of dimension k of the parameter c */
+char *high_name(const char *c, int k);
+/* C parameters of a parameter of an open array type */
+char *open_params(Type *t, const char *name, int isvar);
+/* the same for a procedure type (types only) */
+char *open_types(Type *t);
+
 #endif

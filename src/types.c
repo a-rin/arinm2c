@@ -45,3 +45,41 @@ Type *arith(Type *a, Type *b)
         die("mixed integer types %s and %s: use VAL", tname(a), tname(b));
     return H(a);
 }
+
+int open_dims(Type *t)
+{
+    int n = 0;
+    for (; t->k == K_OPEN; t = t->base)
+        n++;
+    return n;
+}
+
+Type *open_leaf(Type *t)
+{
+    while (t->k == K_OPEN)
+        t = t->base;
+    return t;
+}
+
+char *high_name(const char *c, int k)
+{
+    return k ? fmt("%s_high%d", c, k + 1) : fmt("%s_high", c);
+}
+
+char *open_params(Type *t, const char *name, int isvar)
+{
+    int k, n = open_dims(t);
+    char *r = fmt("%sv_%s%s", t->cname, name, isvar ? "" : "_in");
+    for (k = 0; k < n; k++)
+        r = fmt("%s, int64_t %s", r, high_name(fmt("v_%s", name), k));
+    return r;
+}
+
+char *open_types(Type *t)
+{
+    int k, n = open_dims(t);
+    char *r = fmt("%s", t->cname);
+    for (k = 0; k < n; k++)
+        r = fmt("%s, int64_t", r);
+    return r;
+}

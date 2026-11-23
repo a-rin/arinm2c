@@ -237,7 +237,7 @@ Type *type_(const char *hint)
         }
         for (i = 0; i < pr->n; i++) {
             char *one = pr->p[i].t->k == K_OPEN
-                            ? fmt("%sint64_t", fmt("%s, ", pr->p[i].t->cname))
+                            ? open_types(pr->p[i].t)
                             : pr->p[i].isvar ? fmt("%s *", pr->p[i].t->cname)
                                              : pr->p[i].t->cname;
             params = fmt("%s%s%s", params ? params : "", i ? ", " : "", one);
@@ -297,8 +297,10 @@ Type *type_(const char *hint)
         long long lo[8], hi[8];
         if (accept("OF")) {
             Type *b = type_(NULL);
-            t = mk(K_OPEN, 8, 0, fmt("%s *", b->cname));
+            t = mk(K_OPEN, 8, 0, fmt("%s *", open_leaf(b)->cname));
             t->base = b;
+            if (open_dims(t) > 3)
+                die("an open array can have 3 dimensions at most");
             return t;
         }
         int n = 0, i;

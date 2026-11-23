@@ -149,8 +149,7 @@ static void proc_decl(void)
     for (i = 0; i < p->n; i++) {
         char *one;
         if (p->p[i].t->k == K_OPEN)
-            one = fmt("%sv_%s%s, int64_t v_%s_high", p->p[i].t->cname,
-                      p->p[i].name, p->p[i].isvar ? "" : "_in", p->p[i].name);
+            one = open_params(p->p[i].t, p->p[i].name, p->p[i].isvar);
         else
             one = fmt("%s %sv_%s", p->p[i].t->cname, p->p[i].isvar ? "*" : "",
                       p->p[i].name);
@@ -175,8 +174,13 @@ static void proc_decl(void)
         ps->isvarparam = p->p[i].isvar;
         if (p->p[i].t->k == K_OPEN && !p->p[i].isvar) {
             /* a value parameter is a copy */
-            char *el = p->p[i].t->base->cname;
-            emit("%s v_%s[v_%s_high + 1];", el, p->p[i].name, p->p[i].name);
+            char *el = open_leaf(p->p[i].t)->cname;
+            char *cnt = "1";
+            int k;
+            for (k = 0; k < open_dims(p->p[i].t); k++)
+                cnt = fmt("%s * (%s + 1)", cnt,
+                          high_name(fmt("v_%s", p->p[i].name), k));
+            emit("%s v_%s[%s];", el, p->p[i].name, cnt);
             emit("memcpy(v_%s, v_%s_in, sizeof(v_%s));", p->p[i].name,
                  p->p[i].name, p->p[i].name);
         }
