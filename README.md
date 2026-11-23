@@ -25,7 +25,7 @@ source file is always searched).
     arinm2c -I lib Stack.def -o Stack.h
     arinm2c -I lib Stack.mod -o Stack.c
     arinm2c -I lib Main.mod  -o Main.c
-    cc -o main Main.c Stack.c
+    cc -fwrapv -o main Main.c Stack.c
 
 A module that has a definition module but no implementation module can be
 written in C by hand; see `tests/lib/InOut.def` and `tests/lib/InOut.c`.
@@ -71,9 +71,23 @@ not part of Modula-2; they are there so that a test needs no library.
 ## Not done
 
 Arrays of more than three open dimensions, and Modula-2 features that are not
-listed above. The C code has the semantics of C where Modula-2 leaves the details to
-the implementation: `MOD` of negative numbers, overflow of signed integers, and
-no check of array indices.
+listed above.
+
+## What the C code decides
+
+* **Array indices are checked.** An index outside of the bounds writes a message
+  with the file and the line of the Modula-2 source and stops the program. Compile
+  the C with `-DM2_NOCHECK` to remove the checks.
+* **`DIV` and `MOD`** are `/` and `%` of C. The Report (PIM4, 8.2.1) says that
+  `x DIV y` is the truncated quotient and that
+  `x = (x DIV y)*y + (x MOD y)` with `0 <= (x MOD y) < y`; for a negative `x`
+  these two statements disagree, so the Report defines the operators for
+  non-negative operands only. For a negative operand the C code does what C does:
+  `-7 DIV 3 = -2`, `-7 MOD 3 = -1`. A division by zero is not checked.
+* **Overflow of a signed integer** is undefined in C. Compile the C with
+  `-fwrapv`: the value then wraps. There is no run time error for an overflow.
+* **A value assigned to a subrange variable** is not checked at run time (a
+  constant is checked when it is translated).
 
 ## Source
 

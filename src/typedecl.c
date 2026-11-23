@@ -207,6 +207,8 @@ Type *type_(const char *hint)
         expect("OF");
         el = type_(NULL);
         range_of(el, &lo, &hi);
+        /* ponytail: a set is a uint64_t; ceiling: the elements 0..63; upgrade:
+           an array of words and loops in the set operations */
         if (lo < 0 || hi > 63)
             die("a set can hold the values 0..63 only");
         t = mk(K_SET, 8, 0, "uint64_t");
@@ -299,6 +301,7 @@ Type *type_(const char *hint)
             Type *b = type_(NULL);
             t = mk(K_OPEN, 8, 0, fmt("%s *", open_leaf(b)->cname));
             t->base = b;
+            /* ponytail: three dimensions (Expr.highs); upgrade: a longer array */
             if (open_dims(t) > 3)
                 die("an open array can have 3 dimensions at most");
             return t;

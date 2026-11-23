@@ -18,6 +18,8 @@ static Expr boolexpr(void)
     return c;
 }
 
+/* ponytail: WRITE and WRITELN are a test aid (printf); the library InOut of
+   Modula-2 is not there yet; upgrade: write it as a module in Modula-2 and C */
 static void write_args(int newline)
 {
     if (accept("(")) {

@@ -49,6 +49,10 @@ void check_assign(Type *dst, Expr *e, const char *what)
         die("a type name cannot be used here");
     switch (dst->k) {
     case K_INT:
+        /* ponytail: a value assigned to a subrange variable is not checked at
+           run time (only a constant is checked at translation time); the PIM4
+           Report: "must lie within the specified interval"; upgrade: m2_idx
+           like check for every assignment to a subrange variable */
         ok = s->k == K_Z || (s->k == K_INT && s->size == dst->size);
         if (s->k == K_INT && !ok)
             die("cannot %s %s to %s: use VAL", what, tname(s), tname(dst));
@@ -139,6 +143,13 @@ static char *open_arg(Type *pt, Expr *a, const char *who)
     if (a->t->k == K_OPEN && a->t->base == el)
         return fmt("%s, %s", a->c, a->highs[0]);
     die("the argument of '%s' does not fit the open array parameter", who);
+}
+
+/* the C text that checks an index and gives the offset of the element: the
+   index i must be in lo..hi (hi is a C text: the high bound of an open array) */
+static char *idx_check(const char *i, const char *lo, const char *hi)
+{
+    return fmt("m2_idx(%s, %s, %s, %s, %d)", i, lo, hi, cstr(srcname), errline);
 }
 
 /* a variable of this procedure lives in the frame _fr if the procedure has
@@ -312,12 +323,13 @@ Expr designator_tail(Expr e)
                         char *stride = "1";
                         for (k = 1; e.highs[k]; k++)
                             stride = fmt("%s * ((%s) + 1)", stride, e.highs[k]);
-                        e.c = fmt("(%s + (int64_t)(%s) * %s)", e.c, i.c, stride);
+                        e.c = fmt("(%s + %s * %s)", e.c,
+                                  idx_check(i.c, "0", e.highs[0]), stride);
                         for (k = 0; k < 3; k++)
                             e.highs[k] = e.highs[k + 1];
                         e.highs[3] = NULL;
                     } else {
-                        e.c = fmt("%s[(int64_t)(%s)]", e.c, i.c);
+                        e.c = fmt("%s[%s]", e.c, idx_check(i.c, "0", e.highs[0]));
                         e.highs[0] = NULL;
                     }
                     e.t = e.t->base;
@@ -327,7 +339,9 @@ Expr designator_tail(Expr e)
                     die("indexing of a type that is not an array");
                 if (!isint(i.t) && i.t->k != K_ENUM && i.t->k != K_CHAR)
                     die("an index must be an ordinal value");
-                e.c = fmt("%s.a[(int64_t)(%s)-(%lldLL)]", e.c, i.c, e.t->lo);
+                e.c = fmt("%s.a[%s]", e.c,
+                          idx_check(i.c, fmt("%lldLL", e.t->lo),
+                                    fmt("%lldLL", e.t->hi)));
                 e.t = e.t->base;
             } while (accept(","));
             expect("]");
@@ -617,6 +631,12 @@ static Expr intop(const char *op, Expr a, Expr b)
         }
         return constint(r);
     }
+    /* ponytail: DIV and MOD are C's / and %, and + - * are C's: for a negative
+       operand the PIM4 Report is silent (its equation and "truncated quotient"
+       disagree), so -7 DIV 3 = -2 and -7 MOD 3 = -1 as in C; a division by zero
+       traps; a signed overflow is undefined in C, so compile the C with -fwrapv
+       (it then wraps); ceiling: no run-time error for overflow or a zero
+       divisor; upgrade: __builtin_add_overflow and a check of the divisor. */
     e.c = fmt("((%s)(%s %s %s))", ctype_of(rt), a.c, op, b.c);
     return e;
 }

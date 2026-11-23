@@ -24,7 +24,7 @@ typedef struct Param {
 
 typedef struct Proc {
     int n;
-    Param p[16];
+    Param p[16];        /* ponytail: 16 parameters at most; upgrade: a list */
     Type *ret;
 } Proc;
 

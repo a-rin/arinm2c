@@ -2,6 +2,8 @@
 # Each tests/NAME.mod is translated, compiled and run; the output must equal
 # tests/NAME.out.  A tests/NAME.err file (a part of the message) means that the
 # translation must fail with a message containing that text.
+# A tests/NAME.rt file (a part of a message) means that the program must stop
+# with a run time error and write a message that contains that text.
 # tests/lib holds the modules the tests import: NAME.def (translated to a
 # header), NAME.mod (translated to C), and hand written NAME.c for a definition
 # module that has no implementation module.
@@ -46,8 +48,16 @@ for m in tests/*.mod; do
   if ! ./arinm2c -I tests/lib "$m" -o "$tmp/$b.c" 2>"$tmp/$b.msg"; then
     echo "FAIL $b: $(cat "$tmp/$b.msg")"; fail=$((fail+1)); continue
   fi
-  if ! ${CC:-cc} -std=c11 -Wall -Wno-unused-label -I "$tmp" -o "$tmp/$b" "$tmp/$b.c" $libs 2>"$tmp/$b.cc"; then
+  if ! ${CC:-cc} -std=c11 -fwrapv -Wall -Wno-unused-label -I "$tmp" -o "$tmp/$b" "$tmp/$b.c" $libs 2>"$tmp/$b.cc"; then
     echo "FAIL $b: C compile error"; head -5 "$tmp/$b.cc"; fail=$((fail+1)); continue
+  fi
+  if [ -f "tests/$b.rt" ]; then
+    # a run time error: the program must stop with a message that has this text
+    if "$tmp/$b" >"$tmp/$b.got" 2>"$tmp/$b.rterr"; then
+      echo "FAIL $b: the program should have stopped"; fail=$((fail+1))
+    elif grep -qF "$(cat "tests/$b.rt")" "$tmp/$b.rterr"; then echo "ok   $b (run time error)"
+    else echo "FAIL $b: message was: $(cat "$tmp/$b.rterr")"; fail=$((fail+1)); fi
+    continue
   fi
   "$tmp/$b" >"$tmp/$b.got"
   if cmp -s "$tmp/$b.got" "tests/$b.out"; then echo "ok   $b"

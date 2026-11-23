@@ -22,6 +22,8 @@ void die(const char *f, ...)
     exit(1);
 }
 
+/* ponytail: the memory of the translator is never freed (a one-shot process);
+   ceiling: a source of many million lines; upgrade: an arena that is freed per module */
 char *fmt(const char *f, ...)
 {
     va_list ap, ap2;

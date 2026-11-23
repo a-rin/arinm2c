@@ -199,6 +199,8 @@ static void proc_decl(void)
     Proc *old = NULL;
     PCtx ctx, *parent = cur_p;
     Done *d;
+    /* ponytail: seven levels (lstack) and 60 procedures per outermost
+       procedure (done); upgrade: grow the arrays */
     if (nested && (nl >= 7 || ndone >= 60))
         die("procedures nested too deeply");
     s = NULL;
