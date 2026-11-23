@@ -1,4 +1,4 @@
-MODULE S2;
+MODULE s2;
 (* VAR parameters and open arrays *)
 VAR a, b: LONGINT; v: ARRAY [0..3] OF LONGINT; t: LONGINT;
 
@@ -22,4 +22,4 @@ BEGIN
   v[0] := 1; v[1] := 2; v[2] := 3; v[3] := 4;
   t := Sum(v);
   WRITELN(a, ' ', b, ' ', t)
-END S2.
+END s2.

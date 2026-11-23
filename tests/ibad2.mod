@@ -1,6 +1,6 @@
-MODULE IBAD2;
+MODULE ibad2;
 FROM InOut IMPORT WriteLn;
 BEGIN
   WriteInt(5, 0);
   WriteLn
-END IBAD2.
+END ibad2.

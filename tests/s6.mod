@@ -1,4 +1,4 @@
-MODULE S6;
+MODULE s6;
 (* ARRAY index forms and the ELSE branch of a variant record *)
 TYPE
   Color = (red, green, blue);
@@ -23,4 +23,4 @@ BEGIN
   cl.z := 5;
   s := n[red] + n[green] + n[blue] + g[2][3] + cl.z;
   WRITELN(s)
-END S6.
+END s6.

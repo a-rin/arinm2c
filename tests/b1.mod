@@ -1,4 +1,4 @@
-MODULE B1;
+MODULE b1;
 FROM SYSTEM IMPORT BYTE;
 VAR i: INTEGER; r: RECORD a, b: INTEGER END; c: CHAR;
 
@@ -9,4 +9,4 @@ END Size;
 
 BEGIN
   WRITELN(Size(i), ' ', Size(r), ' ', Size(c))
-END B1.
+END b1.

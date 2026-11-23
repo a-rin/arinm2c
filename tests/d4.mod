@@ -1,5 +1,5 @@
-MODULE D4;
+MODULE d4;
 FROM SYSTEM IMPORT ADDRESS;
 FROM R IMPORT A, MakeA, Raw;
 VAR a: A; p: ADDRESS;
-BEGIN a := MakeA(); p := Raw(a); a := p; WRITELN(1) END D4.
+BEGIN a := MakeA(); p := Raw(a); a := p; WRITELN(1) END d4.

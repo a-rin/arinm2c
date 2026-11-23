@@ -1,4 +1,4 @@
-MODULE S4;
+MODULE s4;
 (* procedure types *)
 TYPE Fn = PROCEDURE (LONGINT): LONGINT;
 VAR f: Fn;
@@ -16,4 +16,4 @@ END Apply;
 BEGIN
   f := Twice;
   WRITELN(f(3), ' ', Apply(Twice, 5))
-END S4.
+END s4.

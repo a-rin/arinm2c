@@ -1,6 +1,6 @@
-MODULE M7BAD2;
+MODULE m7bad2;
 VAR a: INT32; b: INT64;
 BEGIN
   a := 1; b := 1;
   IF a = b THEN WRITELN(1) END
-END M7BAD2.
+END m7bad2.

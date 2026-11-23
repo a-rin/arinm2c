@@ -48,6 +48,16 @@ static char *findfile(const char *name, const char *ext)
 
 static void import_list(void);
 
+/* the name of a module is the name of its file, with the same case */
+static void check_filename(const char *name)
+{
+    const char *b = strrchr(srcname, '/');
+    size_t n = strlen(name);
+    b = b ? b + 1 : srcname;
+    if (strncmp(b, name, n) != 0 || b[n] != '.')
+        die("the module name '%s' does not match the file name '%s'", name, b);
+}
+
 static void save(Saved *v)
 {
     v->src = src; v->srcname = srcname; v->pos = pos; v->curline = curline;
@@ -200,6 +210,7 @@ void def_module(const char *expected, int header)
     expect("DEFINITION");
     expect("MODULE");
     name = ident();
+    check_filename(name);
     if (expected && strcmp(expected, name))
         die("the file defines module %s, not %s", name, expected);
     expect(";");
@@ -241,6 +252,7 @@ void impl_module(void)
     expect("IMPLEMENTATION");
     expect("MODULE");
     modname = ident();
+    check_filename(modname);
     expect(";");
     m = load_module(modname);
     impl_mode = 1;
@@ -291,6 +303,7 @@ void module(void)
 {
     expect("MODULE");
     modname = ident();
+    check_filename(modname);
     expect(";");
     mainbody = 1;
     std_includes();

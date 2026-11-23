@@ -1,4 +1,4 @@
-MODULE C5;
+MODULE c5;
 FROM Q2 IMPORT T, Make;
 VAR a, b: T;
-BEGIN a := Make(); b := a; IF a = b THEN a := NIL END END C5.
+BEGIN a := Make(); b := a; IF a = b THEN a := NIL END END c5.

@@ -1,5 +1,5 @@
-MODULE IBAD1;
+MODULE ibad1;
 IMPORT InOut;
 BEGIN
   WriteInt(5, 0)
-END IBAD1.
+END ibad1.

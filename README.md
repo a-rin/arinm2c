@@ -14,6 +14,9 @@ not been tested against a large body of Modula-2 code.
 
 ## Use
 
+The name of a module is the name of its file, with the same case: `Stack.def`,
+`Stack.mod`, and `MODULE b1;` in `b1.mod`. The translator reports a difference.
+
 A definition module `X.def` becomes a header, an implementation module `X.mod`
 or a program module becomes a C file. `-I dir` adds a directory where the
 definition modules of the imported modules are searched (the directory of the

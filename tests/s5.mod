@@ -1,4 +1,4 @@
-MODULE S5;
+MODULE s5;
 (* WITH and variant records *)
 TYPE
   Pt = RECORD x, y: LONGINT END;
@@ -17,4 +17,4 @@ BEGIN
   s.isRound := FALSE;
   s.w := 5; s.h := 6;
   WRITELN(p.x * p.y, ' ', s.w + s.h)
-END S5.
+END s5.

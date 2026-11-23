@@ -1,4 +1,4 @@
-MODULE M10;
+MODULE m10;
 FROM Stack IMPORT Push, Pop, top;
 IMPORT InOut;
 VAR a: LONGINT;
@@ -15,4 +15,4 @@ BEGIN
   InOut.WriteLn;
   InOut.WriteInt(top, 0);
   InOut.WriteLn
-END M10.
+END m10.

@@ -1,4 +1,4 @@
-MODULE M11;
+MODULE m11;
 VAR total: INTEGER;
 
 MODULE Counter;
@@ -29,4 +29,4 @@ BEGIN
   Inc1;
   total := Double(Get());
   WRITELN(total)
-END M11.
+END m11.

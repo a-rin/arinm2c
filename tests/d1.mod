@@ -1,4 +1,4 @@
-MODULE D1;
+MODULE d1;
 FROM R IMPORT A, B, Holder, MakeA, MakeB, Fill, Val;
 VAR h: Holder;
-BEGIN Fill(h); WRITELN(Val(h)) END D1.
+BEGIN Fill(h); WRITELN(Val(h)) END d1.

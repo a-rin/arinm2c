@@ -1,4 +1,4 @@
-MODULE C6;
+MODULE c6;
 FROM Q2 IMPORT T, Make;
 VAR a: T; i: INTEGER;
-BEGIN a := Make(); i := a END C6.
+BEGIN a := Make(); i := a END c6.

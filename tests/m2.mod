@@ -1,4 +1,4 @@
-MODULE M2;
+MODULE m2;
 VAR i: LONGINT;
 BEGIN
   i := 0;
@@ -14,4 +14,4 @@ BEGIN
     END;
     i := i + 1
   END
-END M2.
+END m2.

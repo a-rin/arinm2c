@@ -1,4 +1,4 @@
-MODULE Val;
+MODULE val;
 VAR a: INT32; b: INT64;
 BEGIN
   a := 5; b := 5;
@@ -6,4 +6,4 @@ BEGIN
   b := VAL(INT64, a) + b;
   a := VAL(INT32, b) - 3;
   WRITELN(a, " ", b)
-END Val.
+END val.

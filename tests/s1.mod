@@ -1,4 +1,4 @@
-MODULE S1;
+MODULE s1;
 (* CONST, enumeration, subrange, ORD, INC, DEC *)
 CONST N = 10; Greeting = "hi";
 TYPE
@@ -12,4 +12,4 @@ BEGIN
   INC(i);
   DEC(i, 2);
   WRITELN(i, ' ', Greeting)
-END S1.
+END s1.

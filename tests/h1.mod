@@ -1,4 +1,4 @@
-MODULE H1;
+MODULE h1;
 MODULE Counter;
   EXPORT Get;
   VAR n: INTEGER;
@@ -10,4 +10,4 @@ END Counter;
 BEGIN
   n := 99;
   WRITELN(Get())
-END H1.
+END h1.

@@ -1,4 +1,4 @@
-MODULE B2;
+MODULE b2;
 FROM SYSTEM IMPORT BYTE;
 TYPE Pt = RECORD x, y: INTEGER END;
 VAR i, j: INTEGER; k: LONGINT; p, q: Pt; s: ARRAY [0..3] OF CHAR;
@@ -21,4 +21,4 @@ BEGIN
   s[0] := 'a'; s[1] := 'b'; s[2] := 'c'; s[3] := 'd';
   Move(s, i);
   WRITELN(j, ' ', k, ' ', q.x, ' ', q.y, ' ', i)
-END B2.
+END b2.

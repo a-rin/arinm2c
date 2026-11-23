@@ -1,4 +1,4 @@
-MODULE M4;
+MODULE m4;
 VAR n: LONGINT;
 
 PROCEDURE Fact(k: LONGINT): LONGINT;
@@ -26,4 +26,4 @@ BEGIN
   Show(Sign(-7));
   Show(Sign(0));
   Show(Sign(3))
-END M4.
+END m4.

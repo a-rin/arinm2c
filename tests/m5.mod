@@ -1,4 +1,4 @@
-MODULE M5;
+MODULE m5;
 FROM InOut IMPORT WriteInt, WriteLn;
 IMPORT InOut;
 VAR i: LONGINT;
@@ -14,4 +14,4 @@ BEGIN
   WriteLn;
   InOut.WriteInt(Twice(i), 5);
   InOut.WriteLn
-END M5.
+END m5.

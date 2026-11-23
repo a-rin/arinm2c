@@ -1,6 +1,6 @@
-MODULE I2;
+MODULE i2;
 IMPORT InOut;
 BEGIN
   InOut.WriteInt(6, 0);
   InOut.WriteLn
-END I2.
+END i2.

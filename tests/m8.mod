@@ -1,4 +1,4 @@
-MODULE M8;
+MODULE m8;
 TYPE
   P = POINTER TO Rec;
   Rec = RECORD v: LONGINT; next: P END;
@@ -36,4 +36,4 @@ BEGIN
   p^.next := q;
   WRITELN(p^.v + p^.next^.v);
   WRITELN("hello", ' ', "x")
-END M8.
+END m8.

@@ -1,4 +1,4 @@
-MODULE H2;
+MODULE h2;
 MODULE A;
   EXPORT GetA;
   VAR n: INTEGER;
@@ -13,4 +13,4 @@ MODULE B;
 BEGIN n := 2 END B;
 BEGIN
   WRITELN(GetA() + GetB())
-END H2.
+END h2.

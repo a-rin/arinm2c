@@ -1,4 +1,4 @@
-MODULE S3;
+MODULE s3;
 (* sets with { } constructors *)
 TYPE Digits = SET OF [0..9];
 VAR s: Digits; n: LONGINT;
@@ -11,4 +11,4 @@ BEGIN
   IF 3 IN s THEN n := n + 10 END;
   IF 9 IN s THEN n := n + 100 END;
   WRITELN(n)
-END S3.
+END s3.
