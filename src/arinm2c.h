@@ -1,0 +1,42 @@
+/*
+ * arinm2c: a Modula-2 (PIM4) to C translator.
+ *
+ * Supported: modules (definition, implementation, program, local), IMPORT,
+ * CONST TYPE VAR PROCEDURE, all statements, integers with the width rules
+ * (VAL changes a width, literals have the type Z), BOOLEAN, CHAR, enumeration,
+ * subrange, SET, POINTER, RECORD (variants), ARRAY (open arrays), procedure
+ * types, opaque types, WITH, SYSTEM (BYTE, ADDRESS, ADR).
+ * Not supported: REAL, typed set constructors, nested procedures.
+ * See status/modula2_fpc.md in daily-ops for the decisions.
+ *
+ * One pass: the parser checks the types and writes the C text on the way.
+ * The translator never frees memory (a one-shot process).
+ * WRITE and WRITELN are built in as a test aid, as in the FPC prototype.
+ *
+ * The modules, in the order of their headers (a header includes the ones
+ * before it):
+ *   util      messages, C text formatting, the output
+ *   lex       the scanner
+ *   types     the types and the rules of the integer widths
+ *   symbols   expressions, symbols, scopes, the predeclared names
+ *   expr      expressions, designators, calls; assignment compatibility
+ *   typedecl  the declaration of types
+ *   stmt      statements
+ *   decl      CONST TYPE VAR PROCEDURE, local modules
+ *   module    .def .mod and program modules, IMPORT
+ *   main      the command line
+ */
+
+#ifndef ARINM2C_H
+#define ARINM2C_H
+
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "module.h"
+
+#endif

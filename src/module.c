@@ -1,0 +1,315 @@
+/* module: definition, implementation and program modules; IMPORT */
+#include "arinm2c.h"
+
+char *incdirs[16];
+
+int nincdirs;
+
+static Module *initlist[32];
+
+static int ninit;
+
+static char *included[64];
+
+static int nincluded;
+
+char *readfile(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    long n;
+    char *buf;
+    if (!f)
+        return NULL;
+    fseek(f, 0, SEEK_END);
+    n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    buf = malloc((size_t)n + 1);
+    if (!buf || fread(buf, 1, (size_t)n, f) != (size_t)n)
+        exit(1);
+    buf[n] = 0;
+    fclose(f);
+    return buf;
+}
+
+/* the path of name+ext in the source directory or in a -I directory */
+static char *findfile(const char *name, const char *ext)
+{
+    int i;
+    for (i = 0; i < nincdirs; i++) {
+        char *p = fmt("%s/%s%s", incdirs[i], name, ext);
+        FILE *f = fopen(p, "rb");
+        if (f) {
+            fclose(f);
+            return p;
+        }
+    }
+    return NULL;
+}
+
+static void import_list(void);
+
+static void save(Saved *v)
+{
+    v->src = src; v->srcname = srcname; v->pos = pos; v->curline = curline;
+    v->errline = errline; v->inproc = inproc; v->tcount = tcount;
+    v->quiet = quiet; v->indef = indef; v->impl_mode = impl_mode;
+    v->mainbody = mainbody; v->tok = tok; v->globals = globals;
+    v->locals = locals; v->modname = modname; v->curproc = curproc;
+    v->fwds = fwds;
+}
+
+static void restore(Saved *v)
+{
+    src = v->src; srcname = v->srcname; pos = v->pos; curline = v->curline;
+    errline = v->errline; inproc = v->inproc; tcount = v->tcount;
+    quiet = v->quiet; indef = v->indef; impl_mode = v->impl_mode;
+    mainbody = v->mainbody; tok = v->tok; globals = v->globals;
+    locals = v->locals; modname = v->modname; curproc = v->curproc;
+    fwds = v->fwds;
+}
+
+/* the definition module name is read (once) and its declarations are known */
+Module *load_module(const char *name)
+{
+    Module *m;
+    Saved sv;
+    char *path, *text;
+    for (m = mods; m; m = m->next)
+        if (!strcmp(m->name, name))
+            return m;
+    path = findfile(name, ".def");
+    if (!path)
+        die("the definition module %s was not found (%s.def)", name, name);
+    text = readfile(path);
+    save(&sv);
+    src = text;
+    srcname = path;
+    pos = 0;
+    curline = 1;
+    globals = locals = NULL;
+    inproc = 0;
+    curproc = NULL;
+    fwds = NULL;
+    tcount = 0;
+    quiet++;
+    impl_mode = 0;
+    mainbody = 0;
+    next();
+    m = calloc(1, sizeof *m);
+    m->name = (char *)name;
+    m->hasimpl = findfile(name, ".mod") != NULL;
+    def_module(name, 0);
+    m->syms = globals;
+    m->next = mods;
+    mods = m;
+    restore(&sv);
+    return m;
+}
+
+void use_module(Module *md)
+{
+    int i;
+    if (quiet || md->builtin)
+        return;
+    for (i = 0; i < nincluded; i++)
+        if (!strcmp(included[i], md->name))
+            return;
+    if (nincluded >= 64)
+        die("too many imported modules");
+    included[nincluded++] = md->name;
+    emit("#include \"%s.h\"", md->name);
+    if (!indef && md->hasimpl) {
+        if (ninit >= 32)
+            die("too many imported modules");
+        initlist[ninit++] = md;
+    }
+}
+
+/* FROM m IMPORT x: the name x is known without the module name */
+void alias(Sym *s)
+{
+    Sym *c;
+    if (lookup_in(globals, s->name))
+        die("'%s' is declared twice", s->name);
+    c = calloc(1, sizeof *c);
+    *c = *s;
+    c->imported = 1;
+    c->exported = 0;
+    c->next = globals;
+    globals = c;
+}
+
+static void import_list(void)
+{
+    while (is("IMPORT") || is("FROM")) {
+        if (accept("FROM")) {
+            Module *md = load_module(ident());
+            expect("IMPORT");
+            do {
+                char *n = ident();
+                Sym *s;
+                for (s = md->syms; s; s = s->next)
+                    if (!s->imported && !strcmp(s->name, n))
+                        break;
+                if (!s)
+                    die("module %s has no '%s'", md->name, n);
+                alias(s);
+            } while (accept(","));
+            expect(";");
+            use_module(md);
+        } else {
+            expect("IMPORT");
+            do {
+                Sym *s;
+                char *n = ident();
+                Module *md = load_module(n);
+                if (lookup_in(globals, n))
+                    die("'%s' is declared twice", n);
+                s = calloc(1, sizeof *s);
+                s->name = n;
+                s->k = S_MODULE;
+                s->mod = md;
+                s->next = globals;
+                globals = s;
+                use_module(md);
+            } while (accept(","));
+            expect(";");
+        }
+    }
+}
+
+static void std_includes(void)
+{
+    emit("#include <stdint.h>");
+    emit("#include <stdio.h>");
+    emit("#include <stdlib.h>");
+    emit("#include <string.h>");
+    emit("static inline uint64_t m2_bit(int64_t i) { return (uint64_t)1 << i; }");
+    emit("static inline uint64_t m2_range(int64_t a, int64_t b)");
+    emit("{");
+    emit("  uint64_t r = 0;");
+    emit("  for (; a <= b; a++)");
+    emit("    r |= (uint64_t)1 << a;");
+    emit("  return r;");
+    emit("}");
+}
+
+void def_module(const char *expected, int header)
+{
+    char *name;
+    expect("DEFINITION");
+    expect("MODULE");
+    name = ident();
+    if (expected && strcmp(expected, name))
+        die("the file defines module %s, not %s", name, expected);
+    expect(";");
+    modname = name;
+    indef = 1;
+    if (header) {
+        emit("#ifndef %s_H", name);
+        emit("#define %s_H", name);
+        emit("#include <stdint.h>");
+    }
+    import_list();
+    decls();
+    expect("END");
+    if (strcmp(ident(), name))
+        die("the definition module end name does not match '%s'", name);
+    expect(".");
+    if (header) {
+        if (findfile(name, ".mod"))
+            emit("void %s_init(void);", name);
+        emit("#endif");
+    }
+    indef = 0;
+}
+
+static void body_start(void)
+{
+    int i;
+    for (i = 0; i < ninit; i++)
+        emit("%s_init();", initlist[i]->name);
+    for (i = 0; i < nlmod; i++)
+        emit("%s();", lmod_inits[i]);
+}
+
+/* IMPLEMENTATION MODULE X: the declarations of X.def are the module's own */
+void impl_module(void)
+{
+    Module *m;
+    Sym *s, *c;
+    expect("IMPLEMENTATION");
+    expect("MODULE");
+    modname = ident();
+    expect(";");
+    m = load_module(modname);
+    impl_mode = 1;
+    globals = NULL;
+    for (s = m->syms; s; s = s->next) {
+        if (s->imported)
+            continue;
+        c = calloc(1, sizeof *c);
+        *c = *s;
+        c->next = globals;
+        globals = c;
+    }
+    std_includes();
+    emit("#include \"%s.h\"", modname);
+    import_list();
+    for (s = globals; s; s = s->next)
+        if (s->k == S_VAR && s->exported)
+            emit("%s %s;", s->t->cname, s->cname);
+    decls();
+    for (s = globals; s; s = s->next)
+        if (s->k == S_TYPE && s->exported && s->t->copaque && !s->t->base)
+            die("the opaque type '%s' is not completed", s->name);
+    emit("");
+    emit("void %s_init(void)", modname);
+    emit("{");
+    ind++;
+    emit("static int done;");
+    emit("if (done)");
+    emit("  return;");
+    emit("done = 1;");
+    body_start();
+    if (accept("BEGIN"))
+        stmts();
+    expect("END");
+    if (strcmp(ident(), modname))
+        die("the module end name does not match '%s'", modname);
+    expect(".");
+    ind--;
+    emit("}");
+    for (s = globals; s; s = s->next)
+        if (s->k == S_PROC && s->exported && !s->defined)
+            die("procedure '%s' of the definition module has no body", s->name);
+    if (tok.k != T_EOF)
+        die("text after the end of the module");
+}
+
+void module(void)
+{
+    expect("MODULE");
+    modname = ident();
+    expect(";");
+    mainbody = 1;
+    std_includes();
+    import_list();
+    decls();
+    emit("");
+    emit("int main(void)");
+    emit("{");
+    ind++;
+    body_start();
+    if (accept("BEGIN"))
+        stmts();
+    expect("END");
+    if (strcmp(ident(), modname))
+        die("the module end name does not match '%s'", modname);
+    expect(".");
+    emit("return 0;");
+    ind--;
+    emit("}");
+    if (tok.k != T_EOF)
+        die("text after the end of the module");
+}
