@@ -154,8 +154,39 @@ not part of Modula-2; they are there so that a test needs no library.
 
 ## Not done
 
-Arrays of more than three open dimensions, and Modula-2 features that are not
-listed above.
+Modula-2 features that are not listed above, and these (all are plans, with no
+date):
+
+* **Debugger support**: `#line` directives, so that `lldb` and `gdb` show the
+  lines of the `.mod` file.
+* **A run time check of the assignment to a subrange variable**, with an option.
+  Now only a constant is checked (when it is compiled). The name of the option,
+  and what happens without it (now: no check), are not decided.
+* **Better messages of the compile errors**:
+  * more than one error (the compilation stops at the first one);
+  * the column, and the text of the line;
+  * the place of a syntax error that is found late (without the `END` of an `IF`,
+    the message points to the end of the module);
+  * which module imported the definition module that has the error;
+  * a constant index outside of the bounds of an array stops the compilation (now
+    the program stops when it runs).
+* **Fixed limits of the translator** that should be lists: the variables of one
+  declaration (32), the fields of one declaration (16), the parameters of a
+  procedure (16), the exported names of a local module (32), the local modules
+  (16), the dimensions of an array (8) and of an open array (3), the depth of
+  nested procedures (7), of `WITH` (16) and of `LOOP` (32), and the elements of a
+  set (0..63). Each is a message that says what is too many.
+
+## Limits
+
+Only clang and the `make` of FreeBSD have been tried. gcc and GNU make have not,
+for the translator, the C that it writes, and the Makefiles.
+
+## Not tried
+
+* A module and a procedure that make the name of a function of the C library (a
+  module `pthread` with a procedure `create`): see "Names in C" below. What
+  happens at the link has not been tried.
 
 ## What the C code decides
 
