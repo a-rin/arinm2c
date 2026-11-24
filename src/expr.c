@@ -40,6 +40,9 @@ long long cval(Expr *e)
     return e->v;
 }
 
+/* where an argument is passed: added to the messages of check_assign */
+static const char *where = "";
+
 /* the left value or constant e can be assigned to a variable of type dst */
 void check_assign(Type *dst, Expr *e, const char *what)
 {
@@ -55,7 +58,7 @@ void check_assign(Type *dst, Expr *e, const char *what)
            like check for every assignment to a subrange variable */
         ok = s->k == K_Z || (s->k == K_INT && s->size == dst->size);
         if (s->k == K_INT && !ok)
-            die("cannot %s %s to %s: use VAL", what, tname(s), tname(dst));
+            die("cannot %s %s to %s%s: use VAL", what, tname(s), tname(dst), where);
         if (ok && dst->sub && e->isconst && (e->v < dst->slo || e->v > dst->shi))
             die("the constant %lld is outside the range %lld..%lld", e->v,
                 dst->slo, dst->shi);
@@ -63,7 +66,7 @@ void check_assign(Type *dst, Expr *e, const char *what)
     case K_REAL:
         ok = s->k == K_RZ || s == dst;
         if (s->k == K_REAL && !ok)
-            die("cannot %s %s to %s: use VAL", what, tname(s), tname(dst));
+            die("cannot %s %s to %s%s: use VAL", what, tname(s), tname(dst), where);
         break;
     case K_BOOL: ok = s->k == K_BOOL; break;
     case K_CHAR: ok = s->k == K_CHAR; break;
@@ -82,7 +85,7 @@ void check_assign(Type *dst, Expr *e, const char *what)
     default: break;
     }
     if (!ok)
-        die("cannot %s %s to %s", what, tname(s), tname(dst));
+        die("cannot %s %s to %s%s", what, tname(s), tname(dst), where);
 }
 
 /* an expression of integer type converted to type t (C text) */
@@ -210,7 +213,9 @@ Expr call_with(Proc *p, const char *cfunc, const char *name,
                             i + 1, name, tname(p->p[i].t));
                     args = fmt("%s%s&%s", args, i ? ", " : "", a.c);
                 } else {
+                    where = fmt(" (argument %d of '%s')", i + 1, name);
                     check_assign(p->p[i].t, &a, "pass");
+                    where = "";
                     args = fmt("%s%s%s", args, i ? ", " : "",
                                conv(p->p[i].t, &a));
                 }

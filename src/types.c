@@ -20,7 +20,16 @@ Type *t_int8, *t_card8, *t_int16, *t_card16, *t_int32, *t_card32,
 const char *tname(Type *t)
 {
     switch (t->k) {
-    case K_INT: return t->cname;
+    case K_INT:
+        /* the names of Modula-2, not the types of C (INT32 is INTEGER here) */
+        if (t == t_byte)
+            return "BYTE";
+        switch (t->size) {
+        case 1: return t->sign ? "INT8" : "CARD8";
+        case 2: return t->sign ? "INT16" : "CARD16";
+        case 4: return t->sign ? "INTEGER" : "CARDINAL";
+        default: return t->sign ? "LONGINT" : "LONGCARD";
+        }
     case K_Z: return "an integer constant";
     case K_RZ: return "a real constant";
     case K_REAL: return t == t_sreal ? "SHORTREAL" : t == t_real ? "REAL" : "LONGREAL";

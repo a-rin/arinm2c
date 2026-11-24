@@ -1,0 +1,4 @@
+MODULE argty;
+PROCEDURE f(a: BOOLEAN; n: INTEGER);
+BEGIN END f;
+BEGIN f(TRUE, FALSE) END argty.
