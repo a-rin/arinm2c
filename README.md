@@ -129,6 +129,16 @@ too: the `.def` files that you use must have the versions that the libraries wer
 built with. A module name is one name: a module of a library that is also found
 in another directory, or in another library, is an error.
 
+Limits:
+
+- Only clang and the BSD make of FreeBSD have been tried. gcc and GNU make have
+  not.
+- The libraries are linked in the order found, depth first. If two libraries
+  require a third one (a diamond), the order may be wrong for a static link.
+- `-V` reads only the C that arinm2c writes. A hand written C module is not
+  checked, and a build that does not use the Makefile of `-M` must run
+  `arinm2c -V` itself.
+
 ### Real numbers
 
 `SHORTREAL` is a C `float`, `REAL` a `double`, `LONGREAL` a `long double` (the
