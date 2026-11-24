@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "lib.h"
 #include "deps.h"
 
 #endif

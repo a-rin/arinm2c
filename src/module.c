@@ -2,15 +2,15 @@
 #include "arinm2c.h"
 #include "md5.h"
 
-char *incdirs[16];
+char **incdirs;
 
 int nincdirs;
 
-static Module *initlist[32];
+static Module **initlist;
 
 static int ninit;
 
-static char *included[64];
+static char **included;
 
 static int nincluded;
 
@@ -79,7 +79,7 @@ static void check_filename(const char *name)
 /* the version of a definition module: the MD5 of its tokens, so that a change
    of a comment or of the layout is not a new version (the tokens are
    separated by a newline: a changed name or number is a new version) */
-static void def_md5(const char *text, char out[33])
+void def_md5(const char *text, char out[33])
 {
     const char *osrc = src;
     size_t opos = pos, n = 0, cap = 4096;
@@ -202,13 +202,11 @@ void use_module(Module *md)
     for (i = 0; i < nincluded; i++)
         if (!strcmp(included[i], md->name))
             return;
-    if (nincluded >= 64)
-        die("too many imported modules");
+    included = grow(included, nincluded, sizeof *included);
     included[nincluded++] = md->name;
     emit("#include \"%s.h\"", md->name);
     if (!indef && md->hasimpl) {
-        if (ninit >= 32)
-            die("too many imported modules");
+        initlist = grow(initlist, ninit, sizeof *initlist);
         initlist[ninit++] = md;
     }
 }

@@ -1,0 +1,7 @@
+IMPLEMENTATION MODULE Util;
+FROM Base IMPORT N;
+PROCEDURE Twice(n: N): N;
+BEGIN
+  RETURN n + n
+END Twice;
+END Util.

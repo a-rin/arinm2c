@@ -91,6 +91,44 @@ all the definition modules it read, in comments at its end;
 `arinm2c -V a.c b.c ...` fails when a module has two versions in these files.
 The Makefile that `-M` writes runs it before the link.
 
+### Libraries
+
+A library is a directory `DIR/NAME/` with `libNAME.a`, the `.def` and `.h` files
+of its modules and `NAME.m2lib`. It is static (no shared libraries yet).
+
+To make one, describe it (`#` starts a comment):
+
+```
+library foo
+module Stack          # Stack.def, and Stack.mod or a hand written Stack.c
+module Colors         # a module with only types and constants is a module, too
+requires bar          # a library that foo uses
+```
+
+```
+arinm2c -I src -L /usr/local/lib/m2 -M foo.m2lib -o Makefile
+make
+make install PREFIX=/usr/local      # to $(PREFIX)/lib/m2/foo/
+```
+
+The modules that the library imports must be in it or in a required library.
+`make install` writes the installed `foo.m2lib`: the versions (MD5) of its
+modules, `uses` lines with the versions of all the other `.def` files that it
+read, the `abi` of the translator.
+
+To use one:
+
+```
+arinm2c -L /usr/local/lib/m2 -l foo -M Main.mod -o Makefile
+```
+
+`-l foo` adds `DIR/foo` to the search path of the `.def` files, and (with the
+libraries that it requires) `-I`, `-L`, `-l` to the compilation and the link. The
+Makefile builds nothing of the libraries. `arinm2c -V` reads the `.m2lib` files,
+too: the `.def` files that you use must have the versions that the libraries were
+built with. A module name is one name: a module of a library that is also found
+in another directory, or in another library, is an error.
+
 ### Real numbers
 
 `SHORTREAL` is a C `float`, `REAL` a `double`, `LONGREAL` a `long double` (the

@@ -16,6 +16,10 @@ void die(const char *f, ...) __attribute__((noreturn));
 
 char *fmt(const char *f, ...);
 
+/* a list of n elements of the given size (NULL: no elements yet), with room for
+   one more; the memory is never freed */
+void *grow(void *list, int n, size_t size);
+
 void emit(const char *f, ...);
 
 char *cstr(const char *s);

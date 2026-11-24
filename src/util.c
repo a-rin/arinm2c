@@ -135,3 +135,11 @@ char *cap_end(FILE *old)
     out = old;
     return buf;
 }
+
+void *grow(void *list, int n, size_t size)
+{
+    list = realloc(list, ((size_t)n + 1) * size);
+    if (!list)
+        exit(1);
+    return list;
+}

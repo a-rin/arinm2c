@@ -4,7 +4,7 @@
 
 #include "decl.h"
 
-extern char *incdirs[16];
+extern char **incdirs;
 
 extern int nincdirs;
 
@@ -23,6 +23,9 @@ typedef struct Saved {
     Proc *curproc;
     Fwd *fwds;
 } Saved;
+
+/* the version of a definition module: the MD5 of the tokens of its text */
+void def_md5(const char *text, char out[33]);
 
 Module *load_module(const char *name);
 

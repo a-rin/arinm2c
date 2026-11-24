@@ -12,4 +12,7 @@ int deps_main(void);
    returns 0 or 1 */
 int versions_main(int n, char **files);
 
+/* arinm2c -P NAME.m2lib: the library file that is installed (with versions) */
+int manifest_main(void);
+
 #endif

@@ -142,6 +142,63 @@ elif ./arinm2c -V "$tmp/vB.c" "$tmp/vc2.c" 2>"$tmp/v2.err"; then
   echo "FAIL ver2/mixed: two versions of A were accepted"; fail=$((fail+1))
 elif grep -q "module A has two versions" "$tmp/v2.err"; then echo "ok   ver2 (a module without code: -V finds the mix)"
 else echo "FAIL ver2/mixed: $(cat "$tmp/v2.err")"; fail=$((fail+1)); fi
+# libraries: tb (Base: a type, Util: code) is built and installed, tl (Cnt, uses
+# Util and Base, requires tb) is built and installed, ltest is built with -l tl
+lt="$tmp/lib"; pfx="$lt/pfx"; mkdir -p "$lt/btb" "$lt/btl" "$lt/cl"
+lstep() {  # lstep NAME COMMAND...: run, on failure say which step
+  s=$1; shift
+  "$@" >"$lt/step.log" 2>&1 || { echo "FAIL lib/$s: $(head -3 "$lt/step.log")"; return 1; }
+}
+lmake() { (cd "$1" && shift && make M2C="$root/arinm2c" "$@"); }
+n=$((n+1))
+if lstep tb-M "$root/arinm2c" -I "$root/tests/libt/tb" -M "$root/tests/libt/tb/tb.m2lib" -o "$lt/btb/Makefile" &&
+   lstep tb-make lmake "$lt/btb" PREFIX="$pfx" install &&
+   lstep tl-M "$root/arinm2c" -I "$root/tests/libt/tl" -L "$pfx/lib/m2" -M "$root/tests/libt/tl/tl.m2lib" -o "$lt/btl/Makefile" &&
+   lstep tl-make lmake "$lt/btl" PREFIX="$pfx" install &&
+   lstep ltest-M "$root/arinm2c" -L "$pfx/lib/m2" -l tl -M "$root/tests/libt/ltest.mod" -o "$lt/cl/Makefile" &&
+   lstep ltest-make lmake "$lt/cl" &&
+   (cd "$lt/cl" && ./ltest >got) && cmp -s "$lt/cl/got" tests/libt/ltest.out; then
+  if [ -e "$lt/cl/Cnt.c" ] || [ -e "$lt/cl/Util.c" ] || [ -e "$lt/cl/Base.h" ]; then
+    echo "FAIL lib: the program built a module of the library"; fail=$((fail+1))
+  elif ! grep -q "^uses Base " "$pfx/lib/m2/tl/tl.m2lib" || ! grep -q "^uses Util " "$pfx/lib/m2/tl/tl.m2lib" || ! grep -q "^module Cnt " "$pfx/lib/m2/tl/tl.m2lib"; then
+    echo "FAIL lib: the installed tl.m2lib has no versions"; fail=$((fail+1))
+  else echo "ok   lib (build, install, use; a library that requires a library)"; fi
+else echo "FAIL lib: see above"; fail=$((fail+1)); fi
+# a module of a library that is also found in another directory
+n=$((n+1))
+if "$root/arinm2c" -I "$root/tests/libt/clash" -L "$pfx/lib/m2" -l tb -M tests/libt/ltest.mod -o "$lt/x.mk" 2>"$lt/clash.err"; then
+  echo "FAIL lib/clash: accepted"; fail=$((fail+1))
+elif grep -q "is also found" "$lt/clash.err"; then echo "ok   lib/clash (rejected)"
+else echo "FAIL lib/clash: $(cat "$lt/clash.err")"; fail=$((fail+1)); fi
+# tl was made with another version of Base than the one that is installed now
+n=$((n+1))
+sleep 1; cp tests/libt/Base2.def "$pfx/lib/m2/tb/Base.def"
+if lmake "$lt/cl" >"$lt/mix.log" 2>&1; then
+  echo "FAIL lib/mix: two versions of Base were accepted"; fail=$((fail+1))
+elif grep -q "module Base has two versions" "$lt/mix.log"; then echo "ok   lib/mix (another version of a .def of the library is found)"
+else echo "FAIL lib/mix: $(tail -3 "$lt/mix.log")"; fail=$((fail+1)); fi
+# no small limit on the number of modules of a library (and of its imports)
+n=$((n+1)); big="$tmp/big"; mkdir "$big"; printf 'library big\n' >"$big/big.m2lib"
+i=1
+while [ $i -le 70 ]; do
+  printf 'DEFINITION MODULE M%s;\nTYPE T = INTEGER;\nEND M%s.\n' $i $i >"$big/M$i.def"
+  printf 'module M%s\n' $i >>"$big/big.m2lib"; i=$((i+1))
+done
+if ./arinm2c -I "$big" -M "$big/big.m2lib" -o "$big/Makefile" 2>"$big/err" && grep -q "^M70.h:" "$big/Makefile"; then
+  echo "ok   lib/70 modules"
+else echo "FAIL lib/70 modules: $(cat "$big/err")"; fail=$((fail+1)); fi
+# more than 16 libraries at the same time (-L, -l, the directories of the .def files)
+n=$((n+1)); many="$tmp/many"; mkdir "$many"; i=1; largs=""
+while [ $i -le 20 ]; do
+  mkdir -p "$many/pfx/lib$i"
+  printf 'library lib%s\nabi 1\nmodule Q%s\n' $i $i >"$many/pfx/lib$i/lib$i.m2lib"
+  printf 'DEFINITION MODULE Q%s;\nTYPE T = INTEGER;\nEND Q%s.\n' $i $i >"$many/pfx/lib$i/Q$i.def"
+  largs="$largs -l lib$i"; i=$((i+1))
+done
+printf 'MODULE mmain;\nFROM Q20 IMPORT T;\nVAR x: T;\nBEGIN\n  x := 1\nEND mmain.\n' >"$many/mmain.mod"
+if ./arinm2c -L "$many/pfx" $largs -M "$many/mmain.mod" -o "$many/Makefile" 2>"$many/err" && grep -q -- "-llib20" "$many/Makefile"; then
+  echo "ok   lib/20 libraries"
+else echo "FAIL lib/20 libraries: $(cat "$many/err")"; fail=$((fail+1)); fi
 rm -rf "$tmp"
 echo "$n tests, $fail failed"
 [ "$fail" = 0 ]

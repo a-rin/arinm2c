@@ -1,0 +1,4 @@
+DEFINITION MODULE Util;
+FROM Base IMPORT N;
+PROCEDURE Twice(n: N): N;
+END Util.
