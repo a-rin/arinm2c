@@ -176,6 +176,15 @@ listed above.
   `-fwrapv`: the value then wraps. There is no run time error for an overflow.
 * **A value assigned to a subrange variable** is not checked at run time (a
   constant is checked when it is translated).
+* **Names in C**: a procedure `P` of a module `M` is the C function `M_P`, a
+  variable is `M_x`. The names are the symbols of the link, so `M_P` must not be
+  the name of another function. A module `pthread` with a procedure `create` is
+  `pthread_create`, which is a function of the C library: the program does not
+  link, or calls the wrong function. Give such a module another name (for
+  example `Pthread`; the case counts). Only the names with the prefix of a
+  module have been tried against the C library (a program with the names
+  `accept`, `exit`, `malloc` and `printf` for its own variables and procedures
+  builds and runs); the case of a module that is named like a C library has not.
 
 ## Source
 
