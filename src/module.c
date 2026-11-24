@@ -367,6 +367,16 @@ void def_module(const char *expected, int header)
     indef = 0;
 }
 
+/* the versions of all the definition modules that were read (the imported
+   ones and what they import) as comments, for arinm2c -V */
+static void emit_versions(void)
+{
+    Module *m;
+    for (m = mods; m; m = m->next)
+        if (m->md5[0])
+            emit("/* m2def %s %s */", m->name, m->md5);
+}
+
 static void body_start(void)
 {
     int i;
@@ -430,6 +440,7 @@ void impl_module(void)
             die("procedure '%s' of the definition module has no body", s->name);
     if (tok.k != T_EOF)
         die("text after the end of the module");
+    emit_versions();
 }
 
 void module(void)
@@ -458,4 +469,5 @@ void module(void)
     emit("}");
     if (tok.k != T_EOF)
         die("text after the end of the module");
+    emit_versions();
 }

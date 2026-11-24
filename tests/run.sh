@@ -130,6 +130,18 @@ n=$((n+1))
 if vbuild tests/ver/v1 tests/ver/v2; then echo "FAIL ver/mixed: two versions linked"; fail=$((fail+1))
 elif grep -q "Vx__def_" "$tmp/vlink.err"; then echo "ok   ver/mixed (the link fails)"
 else echo "FAIL ver/mixed: $(head -3 "$tmp/vlink.err")"; fail=$((fail+1)); fi
+# A.def has no code (only a type), B.def imports A, cmain imports A: B and cmain
+# must agree on the version of A (arinm2c -V); the linker cannot see it
+n=$((n+1))
+./arinm2c -I tests/ver2/a1 tests/ver2/B.mod -o "$tmp/vB.c" &&
+./arinm2c -I tests/ver2/a1 tests/ver2/cmain.mod -o "$tmp/vc1.c" &&
+./arinm2c -I tests/ver2/a2 tests/ver2/cmain.mod -o "$tmp/vc2.c" || { echo "FAIL ver2: translation"; exit 1; }
+if ! ./arinm2c -V "$tmp/vB.c" "$tmp/vc1.c" 2>"$tmp/v2.err"; then
+  echo "FAIL ver2/same: $(cat "$tmp/v2.err")"; fail=$((fail+1))
+elif ./arinm2c -V "$tmp/vB.c" "$tmp/vc2.c" 2>"$tmp/v2.err"; then
+  echo "FAIL ver2/mixed: two versions of A were accepted"; fail=$((fail+1))
+elif grep -q "module A has two versions" "$tmp/v2.err"; then echo "ok   ver2 (a module without code: -V finds the mix)"
+else echo "FAIL ver2/mixed: $(cat "$tmp/v2.err")"; fail=$((fail+1)); fi
 rm -rf "$tmp"
 echo "$n tests, $fail failed"
 [ "$fail" = 0 ]

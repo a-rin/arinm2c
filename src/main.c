@@ -6,6 +6,8 @@ int main(int argc, char **argv)
     char *text, *slash;
     const char *outname = NULL;
     int i, want_deps = 0;
+    if (argc > 1 && !strcmp(argv[1], "-V"))
+        return versions_main(argc - 2, argv + 2);
     for (i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-M"))
             want_deps = 1;

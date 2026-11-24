@@ -85,6 +85,12 @@ symbol `X__def_<md5>`, and only the implementation defines it (a hand written
 and libraries made with two different versions of `X.def` do not link: the
 linker reports the undefined `X__def_<md5>`.
 
+A module without code (only types and constants) has no such symbol, so the
+linker cannot see a mix. Every C file that arinm2c makes lists the versions of
+all the definition modules it read, in comments at its end;
+`arinm2c -V a.c b.c ...` fails when a module has two versions in these files.
+The Makefile that `-M` writes runs it before the link.
+
 ### Real numbers
 
 `SHORTREAL` is a C `float`, `REAL` a `double`, `LONGREAL` a `long double` (the

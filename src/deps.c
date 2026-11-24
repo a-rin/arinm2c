@@ -241,8 +241,16 @@ int deps_main(void)
         if (link.m[i]->modpath || link.m[i]->cpath)
             fprintf(out, " %s.o", link.m[i]->name);
     fprintf(out, "\n\n");
+    /* the C files made by arinm2c must agree on the version of every
+       definition module (arinm2c -V) */
+    fprintf(out, "GENC = %s.c", name);
+    for (i = 0; i < link.n; i++)
+        if (link.m[i]->modpath)
+            fprintf(out, " %s.c", link.m[i]->name);
+    fprintf(out, "\n\n");
     if (is_program) {
         fprintf(out, "%s: %s.o $(OBJS)\n", name, name);
+        fprintf(out, "\t$(M2C) -V $(GENC)\n");
         fprintf(out, "\t$(CC) $(CFLAGS) -o $@ %s.o $(OBJS) $(LDFLAGS)\n\n", name);
     }
 
@@ -304,4 +312,44 @@ int deps_main(void)
     }
     fprintf(out, "\n");
     return 0;
+}
+
+/* the lines "m2def NAME MD5" in comments that the translator writes at the end
+   of a C file */
+int versions_main(int n, char **files)
+{
+    struct { char *name, *md5, *file; } seen[256];
+    int ns = 0, i, bad = 0;
+    for (i = 0; i < n; i++) {
+        char *text = readfile(files[i]), *p;
+        if (!text) {
+            perror(files[i]);
+            return 1;
+        }
+        for (p = text; (p = strstr(p, "/* m2def ")) != NULL; p++) {
+            char name[128], md5[64];
+            int j;
+            if (p != text && p[-1] != '\n')
+                continue;
+            if (sscanf(p, "/* m2def %127s %63s */", name, md5) != 2)
+                continue;
+            for (j = 0; j < ns; j++)
+                if (!strcmp(seen[j].name, name))
+                    break;
+            if (j == ns) {
+                if (ns >= 256)
+                    die("too many modules");
+                seen[ns].name = fmt("%s", name);
+                seen[ns].md5 = fmt("%s", md5);
+                seen[ns].file = files[i];
+                ns++;
+            } else if (strcmp(seen[j].md5, md5)) {
+                fprintf(stderr,
+                        "the definition module %s has two versions: %s (%s) and %s (%s)\n",
+                        name, seen[j].md5, seen[j].file, md5, files[i]);
+                bad = 1;
+            }
+        }
+    }
+    return bad;
 }
